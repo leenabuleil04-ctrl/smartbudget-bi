@@ -1,0 +1,6 @@
+flask
+supabase
+python-dotenv
+pandas
+openpyxl
+PyPDF2

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <h2>Dashboard</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Total Income</h3>
+      <p>{{ metrics.total_income }}</p>
+    </div>
+    <div class="card">
+      <h3>Total Expenses</h3>
+      <p>{{ metrics.total_expenses }}</p>
+    </div>
+    <div class="card">
+      <h3>Current Balance</h3>
+      <p>{{ metrics.balance }}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Spending by Category</h3>
+    <canvas id="catChart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>CBS Benchmark Comparison</h3>
+    <canvas id="cbsChart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>End-of-month projection</h3>
+    <p>{{ metrics.projection }}</p>
+  </div>
+
+  <div class="card">
+    <h3>Budget utilization</h3>
+    <p>{{ budget_utilization if budget_utilization is not none else 'No budgets set' }}</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const catLabels = {{ cat_labels | tojson }}
+    const catData = {{ cat_values | tojson }}
+    const ctx = document.getElementById('catChart').getContext('2d')
+    new Chart(ctx, {
+      type: 'bar',
+      data: { labels: catLabels, datasets: [{ label: 'Spending', data: catData, backgroundColor: '#0fb5a3' }] },
+    })
+
+    const cbsLabels = {{ cbs_labels | tojson }}
+    const cbsData = {{ cbs_values | tojson }}
+    const ctx2 = document.getElementById('cbsChart').getContext('2d')
+    new Chart(ctx2, {
+      type: 'line',
+      data: { labels: cbsLabels, datasets: [{ label: 'Your Spending', data: cbsData, borderColor: '#012a4a' }] },
+    })
+  </script>
+
+</div>
+{% endblock %}

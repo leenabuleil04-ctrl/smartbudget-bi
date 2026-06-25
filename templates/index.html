@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero card">
+  <h2>Welcome, students!</h2>
+  <p>Upload a bank CSV and get BI insights for your finances.</p>
+  <p><a class="btn" href="{{ url_for('import_page') }}">Import CSV</a></p>
+</section>
+{% endblock %}

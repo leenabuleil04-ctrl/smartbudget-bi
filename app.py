@@ -137,23 +137,22 @@ def register():
             flash('Email and password required', 'error')
             return redirect(url_for('register'))
 
-        password_hash = generate_password_hash(password)
-
-        # Insert user into Supabase `students` table
         if supabase is None:
             flash('Supabase client not configured', 'error')
             return redirect(url_for('register'))
 
         try:
-            data = {
+            auth_response = supabase.auth.sign_up({
                 'email': email,
-                'password_hash': password_hash,
-            }
-            res = supabase.table('students').insert(data).execute()
-            err = getattr(res, 'error', None)
+                'password': password,
+                'options': {'data': {'name': name}},
+            })
+            err = getattr(auth_response, 'error', None)
             if err:
-                flash(f'Registration error: {err}', 'error')
+                message = getattr(err, 'message', str(err))
+                flash(f'Registration error: {message}', 'error')
                 return redirect(url_for('register'))
+
             flash('Registration successful — please log in', 'success')
             return redirect(url_for('login'))
         except Exception as e:
@@ -178,23 +177,20 @@ def login():
             return redirect(url_for('login'))
 
         try:
-            res = supabase.table('students').select('*').eq('email', email).execute()
-            err = getattr(res, 'error', None)
+            auth_response = supabase.auth.sign_in_with_password({'email': email, 'password': password})
+            err = getattr(auth_response, 'error', None)
             if err:
-                flash('Login error', 'error')
-                return redirect(url_for('login'))
-            rows = res.data or []
-            if not rows:
-                flash('Invalid credentials', 'error')
-                return redirect(url_for('login'))
-            user = rows[0]
-            stored_hash = user.get('password_hash')
-            if not stored_hash or not check_password_hash(stored_hash, password):
-                flash('Invalid credentials', 'error')
+                message = getattr(err, 'message', str(err))
+                flash(f'Login error: {message}', 'error')
                 return redirect(url_for('login'))
 
-            # Login success
-            session['user'] = {'id': user.get('id'), 'email': user.get('email'), 'name': user.get('name')}
+            data = getattr(auth_response, 'data', {}) or {}
+            user = data.get('user')
+            if not user:
+                flash('Login failed', 'error')
+                return redirect(url_for('login'))
+
+            session['user'] = {'id': user.get('id'), 'email': user.get('email')}
             flash('Logged in successfully', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:

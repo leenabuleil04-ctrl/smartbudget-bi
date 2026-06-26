@@ -1,6 +1,5 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
 import config
 from models.supabase_client import get_supabase_client
 from services.csv_parser import parse_csv
@@ -133,8 +132,8 @@ def register():
         name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
-        if not (email and password):
-            flash('Email and password required', 'error')
+        if not (name and email and password):
+            flash('Name, email and password are required', 'error')
             return redirect(url_for('register'))
 
         if supabase is None:
@@ -142,21 +141,21 @@ def register():
             return redirect(url_for('register'))
 
         try:
-            auth_response = supabase.auth.sign_up({
-                'email': email,
-                'password': password,
-                'options': {'data': {'name': name}},
-            })
-            err = getattr(auth_response, 'error', None)
-            if err:
-                message = getattr(err, 'message', str(err))
-                flash(f'Registration error: {message}', 'error')
+            auth_res = supabase.auth.sign_up({'email': email, 'password': password})
+            if not auth_res.user:
+                flash('Registration failed — please try again', 'error')
                 return redirect(url_for('register'))
+
+            supabase.table('students').insert({
+                'auth_id': str(auth_res.user.id),
+                'name': name,
+                'email': email,
+            }).execute()
 
             flash('Registration successful — please log in', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            flash(f'Unexpected error: {e}', 'error')
+            flash(f'Registration error: {e}', 'error')
             return redirect(url_for('register'))
 
     return render_template('register.html')
@@ -177,24 +176,27 @@ def login():
             return redirect(url_for('login'))
 
         try:
-            auth_response = supabase.auth.sign_in_with_password({'email': email, 'password': password})
-            err = getattr(auth_response, 'error', None)
-            if err:
-                message = getattr(err, 'message', str(err))
-                flash(f'Login error: {message}', 'error')
+            auth_res = supabase.auth.sign_in_with_password({'email': email, 'password': password})
+            if not auth_res.user:
+                flash('אימייל או סיסמה שגויים', 'error')
                 return redirect(url_for('login'))
 
-            data = getattr(auth_response, 'data', {}) or {}
-            user = data.get('user')
-            if not user:
-                flash('Login failed', 'error')
+            res = supabase.table('students').select('*').eq('auth_id', str(auth_res.user.id)).execute()
+            rows = res.data or []
+            if not rows:
+                flash('Student record not found — please contact support', 'error')
                 return redirect(url_for('login'))
 
-            session['user'] = {'id': user.get('id'), 'email': user.get('email')}
+            student = rows[0]
+            session['user'] = {
+                'id': student.get('id'),
+                'email': student.get('email'),
+                'name': student.get('name'),
+            }
             flash('Logged in successfully', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash(f'Unexpected error: {e}', 'error')
+            flash(f'Login error: {e}', 'error')
             return redirect(url_for('login'))
 
     return render_template('login.html')

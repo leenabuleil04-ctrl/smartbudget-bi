@@ -96,6 +96,62 @@ def compute_monthly_trend(transactions):
     return labels, values
 
 
+def generate_insights(spending_by_category, cbs_benchmarks, budget_goals):
+    """Return a list of insight dicts: {type, icon, text}.
+
+    spending_by_category : {category: float}   — expenses this month (positive)
+    cbs_benchmarks       : {category: float}   — monthly CBS averages
+    budget_goals         : {category: float}   — user's monthly limits
+    types: 'warning', 'good', 'info', 'danger'
+    """
+    insights = []
+
+    # biggest expense category (info)
+    if spending_by_category:
+        top_cat = max(spending_by_category, key=lambda c: spending_by_category[c])
+        top_amt = spending_by_category[top_cat]
+        if top_amt > 0:
+            insights.append({
+                'type': 'info',
+                'icon': '📊',
+                'text': f'Your biggest expense this month is {top_cat} at ₪{top_amt:,.0f}.',
+            })
+
+    for cat in CATEGORY_ORDER:
+        spent = spending_by_category.get(cat, 0.0)
+        benchmark = cbs_benchmarks.get(cat, 0.0)
+        goal = budget_goals.get(cat, 0.0)
+
+        # exceeded budget goal (danger)
+        if goal > 0 and spent > goal:
+            over_pct = round((spent / goal - 1) * 100)
+            insights.append({
+                'type': 'danger',
+                'icon': '🚨',
+                'text': f'You exceeded your {cat} budget by {over_pct}% (₪{spent:,.0f} vs ₪{goal:,.0f} limit).',
+            })
+
+        if benchmark > 0:
+            # spending 2× or more above CBS benchmark (warning)
+            if spent >= benchmark * 2:
+                multiple = round(spent / benchmark, 1)
+                insights.append({
+                    'type': 'warning',
+                    'icon': '⚠️',
+                    'text': f'You spent {multiple}× the national average on {cat} (₪{spent:,.0f} vs ₪{benchmark:,.0f} avg).',
+                })
+            # well under benchmark — spending ≤50% of CBS average (good)
+            elif spent > 0 and spent <= benchmark * 0.5:
+                saving_pct = round((1 - spent / benchmark) * 100)
+                insights.append({
+                    'type': 'good',
+                    'icon': '✅',
+                    'text': f'Great job on {cat}! You spent {saving_pct}% less than the national average.',
+                })
+
+    return insights
+
+
 def compute_spending_alerts(transactions):
     """Return list of alert strings for categories that rose >20% vs last month."""
     today = date.today()

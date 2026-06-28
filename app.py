@@ -5,7 +5,7 @@ from supabase_auth.errors import AuthApiError
 from models.supabase_client import get_supabase_client
 from services.csv_parser import parse_csv
 from services.categorizer import categorize_transactions, ALLOWED_CATEGORIES
-from services.analytics import compute_metrics, compute_monthly_trend, compute_spending_alerts, CATEGORY_ORDER
+from services.analytics import compute_metrics, compute_monthly_trend, compute_spending_alerts, generate_insights, CATEGORY_ORDER
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY or os.urandom(24)
@@ -79,6 +79,9 @@ def dashboard():
     except Exception:
         pass
 
+    budget_goals_map = {cat: data['goal'] for cat, data in budget_breakdown.items()}
+    insights = generate_insights(metrics['by_category'], cbs_by_category, budget_goals_map)
+
     return render_template(
         'dashboard.html',
         metrics=metrics,
@@ -90,6 +93,7 @@ def dashboard():
         trend_values=trend_values,
         alerts=alerts,
         transactions=transactions,
+        insights=insights,
     )
 
 

@@ -90,6 +90,39 @@
 
   .no-data { color: #9ca3af; font-size: .9rem; text-align: center; padding: 2rem 0; }
   .section-title { font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 1rem; }
+
+  /* ── Smart Insights ── */
+  .insights-panel {
+    margin-bottom: 2rem;
+  }
+  .insights-panel h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #012a4a;
+    margin: 0 0 .9rem;
+  }
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    border-radius: 10px;
+    border-left: 4px solid;
+    font-size: .88rem;
+    line-height: 1.45;
+  }
+  .insight-card .i-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: .05rem; }
+  .insight-card .i-text { color: inherit; }
+
+  .insight-card.warning  { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+  .insight-card.good     { background:#f0fdf4; border-color:#22c55e; color:#166534; }
+  .insight-card.info     { background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
+  .insight-card.danger   { background:#fff1f2; border-color:#ef4444; color:#991b1b; }
 </style>
 
 <h2 style="margin-bottom:1.5rem;color:#012a4a;">Dashboard</h2>
@@ -109,6 +142,21 @@
     <div class="amount">₪{{ "%.2f"|format(metrics.balance) }}</div>
   </div>
 </div>
+
+<!-- ── Smart Insights ── -->
+{% if insights %}
+<div class="insights-panel">
+  <h2>Smart Insights</h2>
+  <div class="insights-grid">
+    {% for ins in insights %}
+    <div class="insight-card {{ ins.type }}">
+      <span class="i-icon">{{ ins.icon }}</span>
+      <span class="i-text">{{ ins.text }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Spending Alerts ── -->
 {% if alerts %}

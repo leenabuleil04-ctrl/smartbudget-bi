@@ -5,7 +5,7 @@ from supabase_auth.errors import AuthApiError
 from models.supabase_client import get_supabase_client
 from services.csv_parser import parse_csv
 from services.categorizer import categorize_transactions, ALLOWED_CATEGORIES
-from services.analytics import compute_metrics, CATEGORY_ORDER
+from services.analytics import compute_metrics, compute_monthly_trend, compute_spending_alerts, CATEGORY_ORDER
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY or os.urandom(24)
@@ -46,6 +46,12 @@ def dashboard():
     cat_labels = CATEGORY_ORDER
     cat_values = [metrics['by_category'].get(c, 0) for c in cat_labels]
 
+    # monthly trend (last 6 months)
+    trend_labels, trend_values = compute_monthly_trend(transactions)
+
+    # spending alerts vs last month
+    alerts = compute_spending_alerts(transactions)
+
     # CBS benchmark data per category (uses category + monthly_avg columns)
     cbs_by_category = {}
     try:
@@ -78,6 +84,10 @@ def dashboard():
         cat_values=cat_values,
         cbs_values=cbs_values,
         budget_utilization=budget_util,
+        trend_labels=trend_labels,
+        trend_values=trend_values,
+        alerts=alerts,
+        transactions=transactions,
     )
 
 

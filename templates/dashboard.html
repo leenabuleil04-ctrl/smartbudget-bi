@@ -2,94 +2,99 @@
 {% block content %}
 
 <style>
+  /* ── layout helpers ── */
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
   }
-  .summary-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 1.5rem 1.25rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    text-align: center;
-  }
-  .summary-card h3 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #6b7280;
-    margin: 0 0 .5rem;
-  }
-  .summary-card .amount {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #012a4a;
-  }
-  .summary-card.income .amount  { color: #059669; }
-  .summary-card.expenses .amount { color: #dc2626; }
-  .summary-card.balance .amount  { color: #2563eb; }
-
   .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     margin-bottom: 2rem;
   }
-  @media (max-width: 700px) {
-    .charts-grid { grid-template-columns: 1fr; }
-  }
-  .chart-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 1.25rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .chart-card h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #012a4a;
-    margin: 0 0 1rem;
-  }
   .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
+    margin-bottom: 2rem;
   }
   @media (max-width: 700px) {
-    .info-grid { grid-template-columns: 1fr; }
+    .charts-grid, .info-grid { grid-template-columns: 1fr; }
   }
-  .info-card {
+
+  /* ── cards ── */
+  .summary-card, .chart-card, .info-card, .alert-card, .drilldown-card {
     background: #fff;
     border-radius: 10px;
-    padding: 1.25rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
+  .summary-card { padding: 1.5rem 1.25rem; text-align: center; }
+  .chart-card   { padding: 1.25rem; }
+  .info-card    { padding: 1.25rem; }
+  .alert-card   { padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+  .drilldown-card { padding: 1.25rem; margin-bottom: 2rem; }
+
+  /* ── summary card amounts ── */
+  .summary-card h3 {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: .07em;
+    color: #6b7280; margin: 0 0 .5rem;
+  }
+  .summary-card .amount { font-size: 2rem; font-weight: 700; color: #012a4a; }
+  .summary-card.income .amount   { color: #059669; }
+  .summary-card.expenses .amount { color: #dc2626; }
+  .summary-card.balance .amount  { color: #2563eb; }
+
+  /* ── chart card headings ── */
+  .chart-card h3, .info-card h3, .drilldown-card h3 {
+    font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 1rem;
+  }
   .info-card h3 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #6b7280;
-    margin: 0 0 .4rem;
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: .07em;
+    color: #6b7280; margin: 0 0 .4rem;
   }
-  .info-card p {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #012a4a;
-    margin: 0;
+  .info-card p { font-size: 1.25rem; font-weight: 600; color: #012a4a; margin: 0; }
+
+  /* ── alerts ── */
+  .alert-card h3 { font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 .75rem; }
+  .alert-item {
+    display: flex; align-items: flex-start; gap: .5rem;
+    padding: .5rem .75rem; margin-bottom: .5rem;
+    background: #fff7ed; border-left: 3px solid #f59e0b;
+    border-radius: 6px; color: #92400e; font-size: .9rem;
   }
-  .no-data {
-    color: #9ca3af;
-    font-size: 0.9rem;
-    text-align: center;
-    padding: 2rem 0;
+  .alert-item:last-child { margin-bottom: 0; }
+
+  /* ── drill-down table ── */
+  #drilldown { display: none; }
+  #drilldown.visible { display: block; }
+  .dd-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .dd-table th {
+    text-align: left; padding: .5rem .75rem;
+    background: #012a4a; color: #fff; font-weight: 600;
   }
+  .dd-table td { padding: .45rem .75rem; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .dd-table tr:last-child td { border-bottom: none; }
+  .dd-table tr:hover td { background: #f0fdfc; }
+  .dd-close {
+    float: right; cursor: pointer; font-size: .8rem;
+    color: #6b7280; text-decoration: underline; margin-top: .2rem;
+  }
+  .dd-close:hover { color: #012a4a; }
+
+  /* ── pie clickable hint ── */
+  #pieChart { cursor: pointer; }
+  .pie-hint { font-size: .75rem; color: #9ca3af; margin: .4rem 0 0; text-align: center; }
+
+  .no-data { color: #9ca3af; font-size: .9rem; text-align: center; padding: 2rem 0; }
+  .section-title { font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 1rem; }
 </style>
 
 <h2 style="margin-bottom:1.5rem;color:#012a4a;">Dashboard</h2>
 
-<!-- Summary Cards -->
+<!-- ── Summary Cards ── -->
 <div class="summary-grid">
   <div class="summary-card income">
     <h3>Total Income</h3>
@@ -105,7 +110,17 @@
   </div>
 </div>
 
-<!-- Charts -->
+<!-- ── Spending Alerts ── -->
+{% if alerts %}
+<div class="alert-card">
+  <h3>Spending Alerts</h3>
+  {% for msg in alerts %}
+    <div class="alert-item"><span>⚠️</span><span>{{ msg }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Row 1: CBS bar + Pie (clickable) ── -->
 <div class="charts-grid">
   <div class="chart-card">
     <h3>My Spending vs CBS Average</h3>
@@ -119,13 +134,35 @@
     <h3>Spending by Category</h3>
     {% if metrics.total_expenses > 0 %}
       <canvas id="pieChart"></canvas>
+      <p class="pie-hint">Click a slice to see transactions</p>
     {% else %}
       <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
     {% endif %}
   </div>
 </div>
 
-<!-- Projection + Budget -->
+<!-- ── Category Drill-Down Table ── -->
+<div id="drilldown" class="drilldown-card">
+  <h3 id="ddTitle">Transactions</h3>
+  <span class="dd-close" onclick="closeDrilldown()">Close ✕</span>
+  <table class="dd-table">
+    <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+    <tbody id="ddBody"></tbody>
+  </table>
+</div>
+
+<!-- ── Row 2: Monthly Trend (full width) ── -->
+<div class="chart-card" style="margin-bottom:2rem;">
+  <h3>Monthly Spending Trend — Last 6 Months</h3>
+  {% set has_trend = trend_values | select('gt', 0) | list | length > 0 %}
+  {% if has_trend %}
+    <canvas id="trendChart" height="80"></canvas>
+  {% else %}
+    <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+  {% endif %}
+</div>
+
+<!-- ── Projection + Budget ── -->
 <div class="info-grid">
   <div class="info-card">
     <h3>End-of-Month Projection</h3>
@@ -143,16 +180,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const CAT_LABELS = {{ cat_labels | tojson }};
-  const MY_VALUES = {{ cat_values | tojson }};
-  const CBS_VALUES = {{ cbs_values | tojson }};
+  /* ── data from server ── */
+  const CAT_LABELS   = {{ cat_labels   | tojson }};
+  const MY_VALUES    = {{ cat_values   | tojson }};
+  const CBS_VALUES   = {{ cbs_values   | tojson }};
+  const TREND_LABELS = {{ trend_labels | tojson }};
+  const TREND_VALUES = {{ trend_values | tojson }};
+  const ALL_TX       = {{ transactions | tojson }};
 
   const COLORS = [
     '#0fb5a3','#012a4a','#f59e0b','#6366f1',
     '#10b981','#ef4444','#8b5cf6','#f97316'
   ];
 
-  // Bar chart: my spending vs CBS average
+  /* ── 1. Bar: My Spending vs CBS ── */
   const cmpEl = document.getElementById('cmpChart');
   if (cmpEl) {
     new Chart(cmpEl.getContext('2d'), {
@@ -160,49 +201,30 @@
       data: {
         labels: CAT_LABELS,
         datasets: [
-          {
-            label: 'My Spending',
-            data: MY_VALUES,
-            backgroundColor: '#0fb5a3',
-            borderRadius: 4,
-          },
-          {
-            label: 'CBS Average',
-            data: CBS_VALUES,
-            backgroundColor: '#012a4a',
-            borderRadius: 4,
-          },
+          { label: 'My Spending', data: MY_VALUES,  backgroundColor: '#0fb5a3', borderRadius: 4 },
+          { label: 'CBS Average', data: CBS_VALUES, backgroundColor: '#012a4a', borderRadius: 4 },
         ],
       },
       options: {
         responsive: true,
         plugins: { legend: { position: 'top' } },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { callback: v => '₪' + v },
-          },
-        },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '₪' + v } } },
       },
     });
   }
 
-  // Pie chart: spending by category (exclude zero values)
+  /* ── 2. Pie: clickable category ── */
   const pieEl = document.getElementById('pieChart');
   if (pieEl) {
     const pieLabels = CAT_LABELS.filter((_, i) => MY_VALUES[i] > 0);
     const pieData   = MY_VALUES.filter(v => v > 0);
-    const pieColors = COLORS.slice(0, pieLabels.length);
+    const pieColors = pieLabels.map((_, i) => COLORS[i % COLORS.length]);
 
-    new Chart(pieEl.getContext('2d'), {
+    const pieChart = new Chart(pieEl.getContext('2d'), {
       type: 'pie',
       data: {
         labels: pieLabels,
-        datasets: [{
-          data: pieData,
-          backgroundColor: pieColors,
-          borderWidth: 1,
-        }],
+        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 1 }],
       },
       options: {
         responsive: true,
@@ -213,14 +235,78 @@
               label: ctx => {
                 const val = ctx.parsed;
                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                const pct = ((val / total) * 100).toFixed(1);
-                return ` ₪${val.toFixed(2)} (${pct}%)`;
+                return ` ₪${val.toFixed(2)} (${((val/total)*100).toFixed(1)}%)`;
               }
             }
           }
         },
+        onClick: (evt) => {
+          const pts = pieChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+          if (pts.length) showDrilldown(pieLabels[pts[0].index]);
+        },
       },
     });
+  }
+
+  /* ── 3. Line: Monthly Trend ── */
+  const trendEl = document.getElementById('trendChart');
+  if (trendEl) {
+    new Chart(trendEl.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: TREND_LABELS,
+        datasets: [{
+          label: 'Total Spending',
+          data: TREND_VALUES,
+          borderColor: '#0fb5a3',
+          backgroundColor: 'rgba(15,181,163,0.12)',
+          borderWidth: 2,
+          pointBackgroundColor: '#012a4a',
+          pointRadius: 4,
+          fill: true,
+          tension: 0.3,
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => '₪' + v } },
+        },
+      },
+    });
+  }
+
+  /* ── Drill-down helpers ── */
+  function showDrilldown(category) {
+    const rows = ALL_TX.filter(t => {
+      const amt = parseFloat(t.amount) || 0;
+      return t.category === category && amt < 0;
+    });
+
+    document.getElementById('ddTitle').textContent = category + ' — Transactions';
+
+    const tbody = document.getElementById('ddBody');
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="color:#9ca3af;text-align:center;padding:1rem;">No transactions found.</td></tr>';
+    } else {
+      tbody.innerHTML = rows
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map(t => {
+          const amt = Math.abs(parseFloat(t.amount)).toFixed(2);
+          const desc = t.description || '—';
+          return `<tr><td>${t.date}</td><td>${desc}</td><td>₪${amt}</td></tr>`;
+        })
+        .join('');
+    }
+
+    const box = document.getElementById('drilldown');
+    box.classList.add('visible');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeDrilldown() {
+    document.getElementById('drilldown').classList.remove('visible');
   }
 </script>
 

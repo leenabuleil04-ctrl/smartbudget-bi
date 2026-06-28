@@ -1,5 +1,6 @@
 from datetime import datetime, date
 import calendar
+from collections import defaultdict
 from decimal import Decimal
 
 CATEGORY_ORDER = ['Food', 'Rent', 'Transport', 'Entertainment', 'Education', 'Health', 'Shopping', 'Other']
@@ -65,3 +66,70 @@ def compute_metrics(transactions):
         'projection': r(projection),
     }
     return metrics
+
+
+def compute_monthly_trend(transactions):
+    """Return (labels, values) for total expenses over the last 6 calendar months."""
+    monthly = defaultdict(float)
+    for t in transactions:
+        try:
+            amt = float(t.get('amount', 0) or 0)
+        except Exception:
+            amt = 0.0
+        if amt >= 0:
+            continue
+        d = t.get('date', '')
+        if d and len(d) >= 7:
+            monthly[d[:7]] += -amt  # store as positive expense total
+
+    today = date.today()
+    labels, values = [], []
+    for i in range(5, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        key = f'{y:04d}-{m:02d}'
+        labels.append(datetime(y, m, 1).strftime('%b %Y'))
+        values.append(round(monthly.get(key, 0.0), 2))
+    return labels, values
+
+
+def compute_spending_alerts(transactions):
+    """Return list of alert strings for categories that rose >20% vs last month."""
+    today = date.today()
+    this_key = f'{today.year:04d}-{today.month:02d}'
+    lm, ly = today.month - 1, today.year
+    if lm <= 0:
+        lm, ly = 12, ly - 1
+    last_key = f'{ly:04d}-{lm:02d}'
+
+    this_month: dict = defaultdict(float)
+    last_month: dict = defaultdict(float)
+
+    for t in transactions:
+        try:
+            amt = float(t.get('amount', 0) or 0)
+        except Exception:
+            amt = 0.0
+        if amt >= 0:
+            continue
+        d = t.get('date', '')
+        if not d or len(d) < 7:
+            continue
+        cat = t.get('category', 'Other')
+        mk = d[:7]
+        if mk == this_key:
+            this_month[cat] += -amt
+        elif mk == last_key:
+            last_month[cat] += -amt
+
+    alerts = []
+    for cat in CATEGORY_ORDER:
+        cur = this_month.get(cat, 0.0)
+        prev = last_month.get(cat, 0.0)
+        if prev > 0 and cur > prev * 1.2:
+            pct = round((cur / prev - 1) * 100)
+            alerts.append(f'You spent {pct}% more on {cat} than last month.')
+    return alerts

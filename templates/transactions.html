@@ -2,192 +2,422 @@
 {% block content %}
 
 <style>
-  .page-header {
+  main.container { padding-top: 28px; padding-bottom: 80px; }
+
+  /* ── Page header ── */
+  .tx-header {
     display: flex;
-    align-items: baseline;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
   }
-  .page-header h2 { color: #012a4a; margin: 0; }
-  .page-header .count {
-    font-size: 0.85rem;
-    color: #6b7280;
+  .tx-header h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    margin-bottom: 4px;
   }
-
-  .tx-card {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    overflow: hidden;
+  .tx-header .tx-sub {
+    font-size: 14px;
+    color: var(--on-surface-variant);
   }
-
-  .tx-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-  .tx-table thead tr {
-    background: #012a4a;
-    color: #fff;
-  }
-  .tx-table th {
-    padding: .65rem 1rem;
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-  }
-  .tx-table td {
-    padding: .6rem 1rem;
-    border-bottom: 1px solid #f3f4f6;
-    color: #374151;
-  }
-  .tx-table tr:last-child td { border-bottom: none; }
-  .tx-table tr:hover td { background: #f0fdfc; }
-
-  .amount-neg { color: #dc2626; font-weight: 600; }
-  .amount-pos { color: #059669; font-weight: 600; }
-
-  .cat-badge {
-    display: inline-block;
-    padding: .15rem .55rem;
+  .tx-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 13px;
     font-weight: 600;
-    background: #e0f2fe;
-    color: #0369a1;
+    color: var(--on-surface-variant);
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-top: 4px;
   }
 
-  .no-data {
-    text-align: center;
-    padding: 3rem;
-    color: #9ca3af;
-  }
-  .no-data a { color: #0fb5a3; }
-
-  /* ── Filter bar ── */
-  .filter-bar {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
+  /* ── Filter card ── */
+  .filter-card {
     display: flex;
     flex-wrap: wrap;
-    gap: .75rem;
+    gap: 10px;
     align-items: flex-end;
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
   }
-  .filter-group { display: flex; flex-direction: column; gap: .25rem; }
-  .filter-group label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; font-weight: 600; }
-  .filter-group select,
-  .filter-group input[type="date"],
-  .filter-group input[type="text"] {
-    padding: .4rem .65rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: .9rem;
-    color: #111827;
-    background: #fff;
-    min-width: 130px;
+
+  /* search with leading icon */
+  .filter-search-wrap {
+    position: relative;
+    flex: 2;
+    min-width: 200px;
   }
-  .filter-group select:focus,
-  .filter-group input:focus {
+  .filter-search-wrap .material-symbols-outlined {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--outline);
+    pointer-events: none;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .filter-search-wrap input {
+    padding-left: 40px;
+    width: 100%;
+  }
+
+  /* compact filter controls */
+  .filter-card select,
+  .filter-card input[type="date"],
+  .filter-card input[type="text"] {
+    padding: 9px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--outline-variant);
+    background: var(--surface);
+    color: var(--on-surface);
     outline: none;
-    border-color: #0fb5a3;
-    box-shadow: 0 0 0 2px rgba(15,181,163,.15);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    height: 40px;
+    width: auto;
   }
-  .filter-group input[type="text"] { min-width: 180px; }
+  .filter-card select:focus,
+  .filter-card input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.10);
+  }
+  .filter-card select { flex: 1; min-width: 150px; }
+  .filter-card input[type="date"] { flex: 1; min-width: 140px; }
+
+  /* filter action buttons */
+  .filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
   .btn-filter {
-    background: #012a4a;
-    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    background: var(--primary);
+    color: var(--on-primary);
     border: none;
-    border-radius: 6px;
-    padding: .42rem 1.1rem;
-    font-size: .9rem;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    align-self: flex-end;
-    transition: background .15s;
+    transition: filter 0.15s;
+    height: 40px;
+    white-space: nowrap;
   }
-  .btn-filter:hover { background: #0fb5a3; }
-  .btn-clear {
+  .btn-filter:hover { filter: brightness(1.1); }
+  .btn-filter .material-symbols-outlined {
+    font-size: 16px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 18;
+  }
+
+  .btn-clear-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
     background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: .42rem .9rem;
-    font-size: .85rem;
-    color: #6b7280;
-    cursor: pointer;
-    align-self: flex-end;
-    transition: border-color .15s, color .15s;
+    border: 1px solid var(--outline-variant);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+    height: 40px;
+    white-space: nowrap;
   }
-  .btn-clear:hover { border-color: #012a4a; color: #012a4a; }
+  .btn-clear-filter:hover { border-color: var(--error); color: var(--error); text-decoration: none; }
+  .btn-clear-filter .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 16;
+  }
+
+  /* active filters indicator */
+  .filter-active-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(0,92,85,0.08);
+    border: 1px solid rgba(0,92,85,0.15);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  /* ── Transaction list card ── */
+  .tx-list-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  /* header row */
+  .tx-list-head {
+    display: grid;
+    grid-template-columns: 120px 1fr 160px 140px;
+    gap: 24px;
+    padding: 12px 24px;
+    background: var(--surface-container-low);
+    border-bottom: 1px solid var(--outline-variant);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--on-surface-variant);
+  }
+  .tx-list-head .col-cat  { text-align: center; }
+  .tx-list-head .col-amt  { text-align: right; }
+
+  /* transaction row */
+  .tx-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 160px 140px;
+    gap: 24px;
+    padding: 14px 24px;
+    align-items: center;
+    border-bottom: 1px solid rgba(189,201,198,0.25);
+    transition: background 0.15s;
+  }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-row:hover { background: var(--surface-container-low); }
+
+  .tx-date {
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    white-space: nowrap;
+  }
+  .tx-desc {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tx-cat { display: flex; justify-content: center; }
+  .tx-amount {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+  }
+  .amount-neg { color: var(--error); }
+  .amount-pos { color: var(--primary); }
+
+  /* ── Category badges ── */
+  .cat-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    /* default */
+    background: var(--surface-container-low);
+    color: var(--on-surface-variant);
+  }
+  .cat-badge[data-cat="Food"]          { background: #ffdbce; color: #72361b; }
+  .cat-badge[data-cat="Rent"]          { background: #dae2fd; color: #3f465c; }
+  .cat-badge[data-cat="Transport"]     { background: #d3e4fe; color: #3e4947; }
+  .cat-badge[data-cat="Entertainment"] { background: #dce9ff; color: #213145; }
+  .cat-badge[data-cat="Education"]     { background: #e5eeff; color: #3e4947; }
+  .cat-badge[data-cat="Health"]        { background: #dcfce7; color: #166534; }
+  .cat-badge[data-cat="Shopping"]      { background: #ffe4e6; color: #9f1239; }
+  .cat-badge[data-cat="Other"]         { background: #eff4ff; color: #6e7977; }
+
+  /* ── Empty state ── */
+  .tx-empty {
+    padding: 56px 24px;
+    text-align: center;
+    color: var(--on-surface-variant);
+  }
+  .tx-empty .material-symbols-outlined {
+    display: block;
+    font-size: 44px;
+    margin: 0 auto 12px;
+    color: var(--outline-variant);
+    font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 44;
+  }
+  .tx-empty p { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .tx-empty a { font-size: 14px; font-weight: 600; color: var(--primary); }
+
+  /* ── Summary sticky bar ── */
+  .tx-summary-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--outline-variant);
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    /* bleed to container edges */
+    margin: 0 -40px -60px;
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  @media (max-width: 768px) {
+    .tx-summary-bar { margin: 0 -16px -60px; padding-left: 16px; padding-right: 16px; }
+  }
+  .tx-summary-bar .sum-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+  }
+  .tx-summary-bar .sum-label strong { color: var(--on-surface); }
+  .tx-summary-bar .sum-spent {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--error);
+  }
+
+  /* Responsive: stack rows on small screens */
+  @media (max-width: 640px) {
+    .tx-list-head { display: none; }
+    .tx-row {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 4px 12px;
+      padding: 12px 16px;
+    }
+    .tx-date { font-size: 12px; grid-column: 1; grid-row: 2; }
+    .tx-desc { grid-column: 1; grid-row: 1; }
+    .tx-cat  { grid-column: 2; grid-row: 2; justify-content: flex-end; }
+    .tx-amount { grid-column: 2; grid-row: 1; }
+  }
 </style>
 
-<div class="page-header">
-  <h2>Transactions</h2>
-  <span class="count">{{ transactions | length }} records</span>
+<!-- Compute totals for summary bar -->
+{% set ns = namespace(spent=0.0) %}
+{% for t in transactions %}
+  {% if (t.amount | float) < 0 %}
+    {% set ns.spent = ns.spent + (t.amount | float) %}
+  {% endif %}
+{% endfor %}
+
+<!-- ── Page header ── -->
+<div class="tx-header">
+  <div>
+    <h2>My Transactions</h2>
+    <p class="tx-sub">Review and manage your financial activity</p>
+  </div>
+  <span class="tx-count-chip">
+    <span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 16;">receipt_long</span>
+    {{ transactions | length }} record{{ 's' if transactions | length != 1 else '' }}
+  </span>
 </div>
 
-<!-- ── Filter Bar ── -->
-<form method="GET" action="{{ url_for('transactions_page') }}" class="filter-bar">
-  <div class="filter-group">
-    <label for="f_category">Category</label>
-    <select id="f_category" name="category">
-      <option value="">All Categories</option>
-      {% for cat in categories %}
-      <option value="{{ cat }}" {% if f_category == cat %}selected{% endif %}>{{ cat }}</option>
-      {% endfor %}
-    </select>
+<!-- ── Filter bar ── -->
+<form method="GET" action="{{ url_for('transactions_page') }}" class="filter-card">
+
+  <div class="filter-search-wrap">
+    <span class="material-symbols-outlined">search</span>
+    <input
+      type="text"
+      id="f_search"
+      name="search"
+      placeholder="Search descriptions…"
+      value="{{ f_search }}"
+    >
   </div>
-  <div class="filter-group">
-    <label for="f_date_from">From</label>
-    <input type="date" id="f_date_from" name="date_from" value="{{ f_date_from }}">
+
+  <select id="f_category" name="category">
+    <option value="">All Categories</option>
+    {% for cat in categories %}
+    <option value="{{ cat }}" {% if f_category == cat %}selected{% endif %}>{{ cat }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="date" id="f_date_from" name="date_from" value="{{ f_date_from }}" title="From date">
+  <input type="date" id="f_date_to"   name="date_to"   value="{{ f_date_to }}"   title="To date">
+
+  <div class="filter-actions">
+    <button type="submit" class="btn-filter">
+      <span class="material-symbols-outlined">filter_list</span>
+      Filter
+    </button>
+    {% if f_category or f_date_from or f_date_to or f_search %}
+    <a href="{{ url_for('transactions_page') }}" class="btn-clear-filter">
+      <span class="material-symbols-outlined">close</span>
+      Clear
+    </a>
+    {% endif %}
   </div>
-  <div class="filter-group">
-    <label for="f_date_to">To</label>
-    <input type="date" id="f_date_to" name="date_to" value="{{ f_date_to }}">
-  </div>
-  <div class="filter-group">
-    <label for="f_search">Search</label>
-    <input type="text" id="f_search" name="search" placeholder="Description…" value="{{ f_search }}">
-  </div>
-  <button type="submit" class="btn-filter">Filter</button>
-  {% if f_category or f_date_from or f_date_to or f_search %}
-  <a href="{{ url_for('transactions_page') }}" class="btn-clear">Clear</a>
-  {% endif %}
+
 </form>
 
-<div class="tx-card">
+<!-- ── Transaction list ── -->
+<div class="tx-list-card">
+
+  <!-- Header -->
+  <div class="tx-list-head">
+    <div>Date</div>
+    <div>Description</div>
+    <div class="col-cat">Category</div>
+    <div class="col-amt">Amount (₪)</div>
+  </div>
+
   {% if transactions %}
-    <table class="tx-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Description</th>
-          <th>Amount (₪)</th>
-          <th>Category</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for t in transactions %}
-        <tr>
-          <td>{{ t.date }}</td>
-          <td>{{ t.description or '—' }}</td>
-          <td class="{{ 'amount-neg' if (t.amount | float) < 0 else 'amount-pos' }}">
-            {{ "%.2f" | format(t.amount | float) }}
-          </td>
-          <td><span class="cat-badge">{{ t.category }}</span></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="no-data">
-      <p>No transactions yet.</p>
-      <p><a href="{{ url_for('import_page') }}">Import a CSV file</a> to get started.</p>
+    {% for t in transactions %}
+    <div class="tx-row">
+      <div class="tx-date">{{ t.date }}</div>
+      <div class="tx-desc">{{ t.description or '—' }}</div>
+      <div class="tx-cat">
+        <span class="cat-badge" data-cat="{{ t.category }}">{{ t.category }}</span>
+      </div>
+      <div class="tx-amount {{ 'amount-neg' if (t.amount | float) < 0 else 'amount-pos' }}">
+        {{ "%.2f" | format(t.amount | float) }}
+      </div>
     </div>
+    {% endfor %}
+  {% else %}
+    <div class="tx-empty">
+      <span class="material-symbols-outlined">receipt_long</span>
+      <p>No transactions found.</p>
+      <a href="{{ url_for('import_page') }}">Import a CSV file</a> to get started.
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Sticky summary bar ── -->
+<div class="tx-summary-bar">
+  <span class="sum-label">
+    Total: <strong>{{ transactions | length }}</strong> transaction{{ 's' if transactions | length != 1 else '' }}
+  </span>
+  {% if transactions and ns.spent < 0 %}
+  <span class="sum-spent">Total spent: ₪{{ "%.2f" | format(ns.spent | abs) }}</span>
   {% endif %}
 </div>
 

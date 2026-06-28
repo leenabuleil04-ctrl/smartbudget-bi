@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import config
+from supabase_auth.errors import AuthApiError
 from models.supabase_client import get_supabase_client
 from services.csv_parser import parse_csv
 from services.categorizer import categorize_transactions, ALLOWED_CATEGORIES
@@ -41,25 +42,23 @@ def dashboard():
 
     metrics = compute_metrics(transactions)
 
-    # prepare category chart data in fixed order
+    # category chart data in fixed order
     cat_labels = CATEGORY_ORDER
     cat_values = [metrics['by_category'].get(c, 0) for c in cat_labels]
 
-    # simple CBS comparison placeholder (monthly totals last 6 months)
-    cbs_labels = []
-    cbs_values = []
+    # CBS benchmark data per category (uses category + monthly_avg columns)
+    cbs_by_category = {}
     try:
-        res = supabase.table('cbs_benchmarks').select('*').limit(6).execute()
+        res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
         err = getattr(res, 'error', None)
         if not err and res.data:
             for row in res.data:
-                cbs_labels.append(row.get('label', ''))
-                cbs_values.append(row.get('value', 0))
+                cbs_by_category[row['category']] = float(row.get('monthly_avg', 0) or 0)
     except Exception:
-        cbs_labels = ['Jan','Feb','Mar']
-        cbs_values = [0,0,0]
+        pass
+    cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]
 
-    # budget utilization: try fetching budget_goals
+    # budget utilization
     budget_util = None
     try:
         res = supabase.table('budget_goals').select('*').eq('student_id', user['id']).execute()
@@ -68,13 +67,18 @@ def dashboard():
             total_budget = sum((b.get('amount') or 0) for b in res.data)
             spent = sum(metrics['by_category'].values())
             if total_budget > 0:
-                budget_util = f"{round((spent/total_budget)*100,1)}%"
-            else:
-                budget_util = 'No budget amounts configured'
+                budget_util = round((spent / total_budget) * 100, 1)
     except Exception:
         budget_util = None
 
-    return render_template('dashboard.html', metrics=metrics, cat_labels=cat_labels, cat_values=cat_values, cbs_labels=cbs_labels, cbs_values=cbs_values, budget_utilization=budget_util)
+    return render_template(
+        'dashboard.html',
+        metrics=metrics,
+        cat_labels=cat_labels,
+        cat_values=cat_values,
+        cbs_values=cbs_values,
+        budget_utilization=budget_util,
+    )
 
 
 @app.route('/import', methods=['GET', 'POST'])
@@ -178,16 +182,43 @@ def login():
         try:
             auth_res = supabase.auth.sign_in_with_password({'email': email, 'password': password})
             if not auth_res.user:
-                flash('אימייל או סיסמה שגויים', 'error')
+                flash('Invalid email or password', 'error')
                 return redirect(url_for('login'))
 
-            res = supabase.table('students').select('*').eq('auth_id', str(auth_res.user.id)).execute()
-            rows = res.data or []
-            if not rows:
-                flash('Student record not found — please contact support', 'error')
-                return redirect(url_for('login'))
+            auth_uuid = str(auth_res.user.id)
+            user_email = auth_res.user.email
+            meta = getattr(auth_res.user, 'user_metadata', None) or {}
+            display_name = meta.get('name') if isinstance(meta, dict) else None
 
-            student = rows[0]
+            # 1) look up by auth_id (normal register flow)
+            student = None
+            try:
+                res = supabase.table('students').select('*').eq('auth_id', auth_uuid).maybe_single().execute()
+                if res and res.data:
+                    student = res.data
+            except Exception:
+                pass
+
+            # 2) fall back to id == auth_uuid (manual-upsert accounts)
+            if not student:
+                try:
+                    res = supabase.table('students').select('*').eq('id', auth_uuid).maybe_single().execute()
+                    if res and res.data:
+                        student = res.data
+                except Exception:
+                    pass
+
+            # 3) auto-create with both id and auth_id set to the auth UUID
+            if not student:
+                try:
+                    res = supabase.table('students').upsert(
+                        {'id': auth_uuid, 'auth_id': auth_uuid, 'email': user_email, 'name': display_name or user_email},
+                        on_conflict='id',
+                    ).execute()
+                    student = (res.data or [{}])[0]
+                except Exception:
+                    student = {'id': auth_uuid, 'email': user_email, 'name': display_name or user_email}
+
             session['user'] = {
                 'id': student.get('id'),
                 'email': student.get('email'),
@@ -195,6 +226,9 @@ def login():
             }
             flash('Logged in successfully', 'success')
             return redirect(url_for('dashboard'))
+        except AuthApiError as e:
+            flash(f'Login error: {e}', 'error')
+            return redirect(url_for('login'))
         except Exception as e:
             flash(f'Login error: {e}', 'error')
             return redirect(url_for('login'))

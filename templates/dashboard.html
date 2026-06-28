@@ -1,60 +1,227 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card">
-  <h2>Dashboard</h2>
-  <div class="grid">
-    <div class="card">
-      <h3>Total Income</h3>
-      <p>{{ metrics.total_income }}</p>
-    </div>
-    <div class="card">
-      <h3>Total Expenses</h3>
-      <p>{{ metrics.total_expenses }}</p>
-    </div>
-    <div class="card">
-      <h3>Current Balance</h3>
-      <p>{{ metrics.balance }}</p>
-    </div>
+
+<style>
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .summary-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.5rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .summary-card h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #6b7280;
+    margin: 0 0 .5rem;
+  }
+  .summary-card .amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #012a4a;
+  }
+  .summary-card.income .amount  { color: #059669; }
+  .summary-card.expenses .amount { color: #dc2626; }
+  .summary-card.balance .amount  { color: #2563eb; }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+  .chart-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .chart-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #012a4a;
+    margin: 0 0 1rem;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 700px) {
+    .info-grid { grid-template-columns: 1fr; }
+  }
+  .info-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .info-card h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #6b7280;
+    margin: 0 0 .4rem;
+  }
+  .info-card p {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #012a4a;
+    margin: 0;
+  }
+  .no-data {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem 0;
+  }
+</style>
+
+<h2 style="margin-bottom:1.5rem;color:#012a4a;">Dashboard</h2>
+
+<!-- Summary Cards -->
+<div class="summary-grid">
+  <div class="summary-card income">
+    <h3>Total Income</h3>
+    <div class="amount">₪{{ "%.2f"|format(metrics.total_income) }}</div>
   </div>
-
-  <div class="card">
-    <h3>Spending by Category</h3>
-    <canvas id="catChart" width="400" height="200"></canvas>
+  <div class="summary-card expenses">
+    <h3>Total Expenses</h3>
+    <div class="amount">₪{{ "%.2f"|format(metrics.total_expenses) }}</div>
   </div>
-
-  <div class="card">
-    <h3>CBS Benchmark Comparison</h3>
-    <canvas id="cbsChart" width="400" height="200"></canvas>
+  <div class="summary-card balance">
+    <h3>Balance</h3>
+    <div class="amount">₪{{ "%.2f"|format(metrics.balance) }}</div>
   </div>
-
-  <div class="card">
-    <h3>End-of-month projection</h3>
-    <p>{{ metrics.projection }}</p>
-  </div>
-
-  <div class="card">
-    <h3>Budget utilization</h3>
-    <p>{{ budget_utilization if budget_utilization is not none else 'No budgets set' }}</p>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const catLabels = {{ cat_labels | tojson }}
-    const catData = {{ cat_values | tojson }}
-    const ctx = document.getElementById('catChart').getContext('2d')
-    new Chart(ctx, {
-      type: 'bar',
-      data: { labels: catLabels, datasets: [{ label: 'Spending', data: catData, backgroundColor: '#0fb5a3' }] },
-    })
-
-    const cbsLabels = {{ cbs_labels | tojson }}
-    const cbsData = {{ cbs_values | tojson }}
-    const ctx2 = document.getElementById('cbsChart').getContext('2d')
-    new Chart(ctx2, {
-      type: 'line',
-      data: { labels: cbsLabels, datasets: [{ label: 'Your Spending', data: cbsData, borderColor: '#012a4a' }] },
-    })
-  </script>
-
 </div>
+
+<!-- Charts -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <h3>My Spending vs CBS Average</h3>
+    {% if metrics.total_expenses > 0 %}
+      <canvas id="cmpChart"></canvas>
+    {% else %}
+      <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+    {% endif %}
+  </div>
+  <div class="chart-card">
+    <h3>Spending by Category</h3>
+    {% if metrics.total_expenses > 0 %}
+      <canvas id="pieChart"></canvas>
+    {% else %}
+      <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Projection + Budget -->
+<div class="info-grid">
+  <div class="info-card">
+    <h3>End-of-Month Projection</h3>
+    <p>₪{{ "%.2f"|format(metrics.projection) }}</p>
+  </div>
+  <div class="info-card">
+    <h3>Budget Utilization</h3>
+    {% if budget_utilization is not none %}
+      <p>{{ budget_utilization }}%</p>
+    {% else %}
+      <p style="color:#9ca3af;font-size:0.9rem;">No budget goals set</p>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const CAT_LABELS = {{ cat_labels | tojson }};
+  const MY_VALUES = {{ cat_values | tojson }};
+  const CBS_VALUES = {{ cbs_values | tojson }};
+
+  const COLORS = [
+    '#0fb5a3','#012a4a','#f59e0b','#6366f1',
+    '#10b981','#ef4444','#8b5cf6','#f97316'
+  ];
+
+  // Bar chart: my spending vs CBS average
+  const cmpEl = document.getElementById('cmpChart');
+  if (cmpEl) {
+    new Chart(cmpEl.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: CAT_LABELS,
+        datasets: [
+          {
+            label: 'My Spending',
+            data: MY_VALUES,
+            backgroundColor: '#0fb5a3',
+            borderRadius: 4,
+          },
+          {
+            label: 'CBS Average',
+            data: CBS_VALUES,
+            backgroundColor: '#012a4a',
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: v => '₪' + v },
+          },
+        },
+      },
+    });
+  }
+
+  // Pie chart: spending by category (exclude zero values)
+  const pieEl = document.getElementById('pieChart');
+  if (pieEl) {
+    const pieLabels = CAT_LABELS.filter((_, i) => MY_VALUES[i] > 0);
+    const pieData   = MY_VALUES.filter(v => v > 0);
+    const pieColors = COLORS.slice(0, pieLabels.length);
+
+    new Chart(pieEl.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels: pieLabels,
+        datasets: [{
+          data: pieData,
+          backgroundColor: pieColors,
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.parsed;
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = ((val / total) * 100).toFixed(1);
+                return ` ₪${val.toFixed(2)} (${pct}%)`;
+              }
+            }
+          }
+        },
+      },
+    });
+  }
+</script>
+
 {% endblock %}

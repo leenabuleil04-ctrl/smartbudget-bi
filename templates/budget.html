@@ -1,112 +1,372 @@
 {% extends 'base.html' %}
 {% block content %}
 
+{# ── Per-category icon map (Jinja dict, no backend change needed) ── #}
+{% set CAT_ICONS = {
+  'Food':          'restaurant',
+  'Rent':          'home',
+  'Transport':     'train',
+  'Entertainment': 'movie',
+  'Education':     'school',
+  'Health':        'local_hospital',
+  'Shopping':      'shopping_bag',
+  'Other':         'category'
+} %}
+
 <style>
-  .budget-card {
-    background: #fff;
+  main.container { padding-top: 28px; padding-bottom: 56px; }
+
+  .budget-wrap { max-width: 780px; margin: 0 auto; }
+
+  /* ── Page header ── */
+  .budget-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .budget-page-header h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    margin-bottom: 4px;
+  }
+  .budget-page-header .sub {
+    font-size: 14px;
+    color: var(--on-surface-variant);
+    line-height: 1.5;
+    max-width: 480px;
+  }
+  .budget-dash-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    padding: 7px 14px;
+    border: 1px solid var(--outline-variant);
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 2rem;
-    max-width: 600px;
+    background: var(--surface-container-lowest);
+    transition: border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-top: 4px;
+    flex-shrink: 0;
   }
-  .budget-card h2 {
-    color: #012a4a;
-    margin: 0 0 .4rem;
-  }
-  .budget-card .subtitle {
-    color: #6b7280;
-    font-size: 0.9rem;
-    margin: 0 0 2rem;
+  .budget-dash-link:hover { border-color: var(--primary); background: var(--surface-container-low); text-decoration: none; }
+  .budget-dash-link .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 16;
   }
 
-  .budget-row {
+  /* ── Info banner ── */
+  .budget-info-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    background: rgba(0,92,85,0.05);
+    border: 1px solid rgba(0,92,85,0.15);
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .budget-info-banner .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .budget-info-banner p {
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    line-height: 1.55;
+    margin: 0;
+  }
+  .budget-info-banner strong { color: var(--primary); font-weight: 600; }
+
+  /* ── 2-column category grid ── */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 560px) { .cat-grid { grid-template-columns: 1fr; } }
+
+  /* ── Category budget card ── */
+  .cat-budget-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 14px;
+    transition: box-shadow 0.15s, border-color 0.15s;
   }
-  .budget-row label {
-    width: 130px;
+  .cat-budget-card:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.08);
+  }
+
+  /* icon circle — per-category via data-cat */
+  .cat-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    background: var(--surface-container-low);
+  }
+  .cat-icon-circle .material-symbols-outlined {
+    font-size: 22px;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  /* per-category colours */
+  .cat-icon-circle[data-cat="Food"]          { background: #ffdbce; color: #72361b; }
+  .cat-icon-circle[data-cat="Rent"]          { background: #dae2fd; color: #3f465c; }
+  .cat-icon-circle[data-cat="Transport"]     { background: #d3e4fe; color: #3e4947; }
+  .cat-icon-circle[data-cat="Entertainment"] { background: #dce9ff; color: #213145; }
+  .cat-icon-circle[data-cat="Education"]     { background: #e5eeff; color: #3e4947; }
+  .cat-icon-circle[data-cat="Health"]        { background: #dcfce7; color: #166534; }
+  .cat-icon-circle[data-cat="Shopping"]      { background: #ffe4e6; color: #9f1239; }
+  .cat-icon-circle[data-cat="Other"]         { background: #eff4ff; color: #6e7977; }
+
+  /* label + input area */
+  .cat-field { flex: 1; min-width: 0; }
+  .cat-field label {
+    display: block;
+    font-size: 13px;
     font-weight: 600;
-    color: #374151;
-    font-size: 0.9rem;
+    color: var(--on-surface);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
   }
-  .budget-input {
-    flex: 1;
-    position: relative;
-  }
-  .budget-input span {
+
+  /* ₪ prefix input */
+  .cat-input-wrap { position: relative; }
+  .cat-input-wrap .shekel {
     position: absolute;
-    left: .75rem;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: #6b7280;
-    font-size: 0.9rem;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
     pointer-events: none;
+    line-height: 1;
   }
-  .budget-input input {
+  .cat-input-wrap input[type="number"] {
     width: 100%;
-    padding: .5rem .75rem .5rem 1.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    color: #111827;
-    box-sizing: border-box;
-    transition: border-color .15s;
-  }
-  .budget-input input:focus {
+    padding: 9px 12px 9px 28px;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
     outline: none;
-    border-color: #0fb5a3;
-    box-shadow: 0 0 0 3px rgba(15,181,163,.15);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    display: block;
+  }
+  .cat-input-wrap input[type="number"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.10);
+    background: var(--surface-container-lowest);
+  }
+  .cat-input-wrap input[type="number"]::placeholder { color: var(--outline); font-weight: 400; }
+  /* hide number spinners */
+  .cat-input-wrap input[type="number"]::-webkit-inner-spin-button,
+  .cat-input-wrap input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .cat-input-wrap input[type="number"] { -moz-appearance: textfield; }
+
+  /* ── Divider ── */
+  .budget-divider {
+    border: none;
+    border-top: 1px solid var(--outline-variant);
+    margin: 8px 0 24px;
   }
 
-  .divider {
+  /* ── Save button ── */
+  .btn-save-budget {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 14px 24px;
+    border-radius: 14px;
     border: none;
-    border-top: 1px solid #f3f4f6;
-    margin: 1.5rem 0;
-  }
-
-  .btn-save {
-    background: #012a4a;
-    color: #fff;
-    border: none;
-    border-radius: 7px;
-    padding: .65rem 2rem;
-    font-size: 0.95rem;
+    font-family: inherit;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background .15s;
+    transition: filter 0.15s, transform 0.1s;
+    box-shadow: 0 4px 12px rgba(0,92,85,0.22);
+    margin-bottom: 32px;
   }
-  .btn-save:hover { background: #0fb5a3; }
+  .btn-save-budget:hover  { filter: brightness(1.1); }
+  .btn-save-budget:active { transform: scale(0.99); }
+  .btn-save-budget .material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+  }
+
+  /* ── Insight cards at bottom (from mockup AI Insights section) ── */
+  .budget-tips-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 700px) { .budget-tips-grid { grid-template-columns: 1fr; } }
+
+  .budget-tip-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s;
+  }
+  .budget-tip-card:hover { box-shadow: var(--shadow-lg); }
+
+  .tip-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .tip-icon-circle.teal { background: rgba(15,118,110,0.15); }
+  .tip-icon-circle.rose { background: rgba(186,26,26,0.12); }
+  .tip-icon-circle.blue { background: rgba(59,130,246,0.12); }
+  .tip-icon-circle .material-symbols-outlined {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .tip-icon-circle.teal .material-symbols-outlined { color: var(--primary-container); }
+  .tip-icon-circle.rose .material-symbols-outlined { color: var(--error); }
+  .tip-icon-circle.blue .material-symbols-outlined { color: #3b82f6; }
+
+  .budget-tip-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  .budget-tip-card p {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--on-surface-variant);
+  }
 </style>
 
-<div class="budget-card">
-  <h2>Monthly Budget Goals</h2>
-  <p class="subtitle">Set a spending limit (₪) per category for this month. Leave blank to skip a category.</p>
+<div class="budget-wrap">
 
-  <form method="POST" action="{{ url_for('budget') }}">
-    {% for cat in categories %}
-    <div class="budget-row">
-      <label for="cat_{{ cat }}">{{ cat }}</label>
-      <div class="budget-input">
-        <span>₪</span>
-        <input
-          type="number"
-          id="cat_{{ cat }}"
-          name="{{ cat }}"
-          min="0"
-          step="0.01"
-          placeholder="0.00"
-          value="{{ goals.get(cat, '') }}"
-        >
-      </div>
+  <!-- ── Page header ── -->
+  <div class="budget-page-header">
+    <div>
+      <h2>Monthly Budget Goals</h2>
+      <p class="sub">Set a spending limit per category for this month. Leave blank to skip a category.</p>
     </div>
-    {% endfor %}
+    <a href="{{ url_for('dashboard') }}" class="budget-dash-link">
+      <span class="material-symbols-outlined">dashboard</span>
+      View Dashboard
+    </a>
+  </div>
 
-    <hr class="divider">
-    <button type="submit" class="btn-save">Save Budget Goals</button>
+  <!-- ── Info banner ── -->
+  <div class="budget-info-banner">
+    <span class="material-symbols-outlined">info</span>
+    <p>
+      Budget goals appear as <strong>progress bars on your Dashboard</strong>.
+      You'll see a warning when spending reaches 80% of a limit, and an alert when you exceed it.
+    </p>
+  </div>
+
+  <!-- ── Form ── -->
+  <form method="POST" action="{{ url_for('budget') }}">
+
+    <div class="cat-grid">
+      {% for cat in categories %}
+      <div class="cat-budget-card">
+
+        <div class="cat-icon-circle" data-cat="{{ cat }}">
+          <span class="material-symbols-outlined">{{ CAT_ICONS.get(cat, 'category') }}</span>
+        </div>
+
+        <div class="cat-field">
+          <label for="cat_{{ cat }}">{{ cat }}</label>
+          <div class="cat-input-wrap">
+            <span class="shekel">₪</span>
+            <input
+              type="number"
+              id="cat_{{ cat }}"
+              name="{{ cat }}"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value="{{ goals.get(cat, '') }}"
+            >
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <hr class="budget-divider">
+
+    <button type="submit" class="btn-save-budget">
+      <span class="material-symbols-outlined">save</span>
+      Save Budget Goals
+    </button>
+
   </form>
+
+  <!-- ── Tips (AI Insights card style from mockup) ── -->
+  <div class="budget-tips-grid">
+
+    <div class="budget-tip-card">
+      <div class="tip-icon-circle teal">
+        <span class="material-symbols-outlined">savings</span>
+      </div>
+      <h4>Start with the 50/30/20 Rule</h4>
+      <p>Allocate 50% of income to needs (Rent, Food), 30% to wants (Entertainment, Shopping), and 20% to savings.</p>
+    </div>
+
+    <div class="budget-tip-card">
+      <div class="tip-icon-circle rose">
+        <span class="material-symbols-outlined">campaign</span>
+      </div>
+      <h4>Track Overspending Alerts</h4>
+      <p>The Dashboard shows a warning at 80% utilization and a red alert when any category exceeds its limit.</p>
+    </div>
+
+    <div class="budget-tip-card">
+      <div class="tip-icon-circle blue">
+        <span class="material-symbols-outlined">auto_awesome</span>
+      </div>
+      <h4>Compare to CBS Averages</h4>
+      <p>Your Dashboard's bar chart shows your spending against national Israeli student averages for each category.</p>
+    </div>
+
+  </div>
+
 </div>
 
 {% endblock %}

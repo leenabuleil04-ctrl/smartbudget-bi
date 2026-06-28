@@ -2,185 +2,499 @@
 {% block content %}
 
 <style>
-  /* ── layout helpers ── */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
+  main.container { padding-top: 28px; padding-bottom: 48px; }
+
+  /* ── Entrance animations ── */
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  @media (max-width: 700px) {
-    .charts-grid, .info-grid { grid-template-columns: 1fr; }
+  .fi-1 { animation: slideUpFade 0.45s ease-out 0.05s both; }
+  .fi-2 { animation: slideUpFade 0.45s ease-out 0.12s both; }
+  .fi-3 { animation: slideUpFade 0.45s ease-out 0.19s both; }
+  .fi-4 { animation: slideUpFade 0.45s ease-out 0.26s both; }
+  .fi-5 { animation: slideUpFade 0.45s ease-out 0.33s both; }
+  .fi-6 { animation: slideUpFade 0.45s ease-out 0.40s both; }
+  .fi-7 { animation: slideUpFade 0.45s ease-out 0.47s both; }
+  .fi-8 { animation: slideUpFade 0.45s ease-out 0.54s both; }
+  @media (prefers-reduced-motion: reduce) {
+    [class*="fi-"] { animation: none; opacity: 1; transform: none; }
   }
 
-  /* ── cards ── */
-  .summary-card, .chart-card, .info-card, .alert-card, .drilldown-card {
-    background: #fff;
+  /* ── Page header ── */
+  .dash-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .dash-title-row h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+  }
+  .dash-month-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+  }
+  .dash-month-chip .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 16;
+  }
+
+  /* ── Forecast Banner ── */
+  .forecast-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .forecast-banner .fc-icon { font-size: 22px; flex-shrink: 0; }
+  .forecast-banner .fc-text { flex: 1; }
+  .forecast-banner .fc-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .forecast-banner.green {
+    background: #f0fdf4; color: #166534; border-color: #bbf7d0;
+  }
+  .forecast-banner.green .fc-badge { background: #bbf7d0; color: #166534; }
+  .forecast-banner.red {
+    background: #fff1f2; color: #991b1b; border-color: #fecdd3;
+  }
+  .forecast-banner.red .fc-badge { background: #fecdd3; color: #991b1b; }
+  .forecast-banner.grey {
+    background: var(--surface-container-low); color: var(--on-surface-variant); border-color: var(--outline-variant);
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 860px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s, transform 0.15s;
+    cursor: default;
+  }
+  .kpi-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+  .kpi-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .kpi-icon {
+    width: 40px; height: 40px;
+    background: var(--surface-container-high);
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
   }
-  .summary-card { padding: 1.5rem 1.25rem; text-align: center; }
-  .chart-card   { padding: 1.25rem; }
-  .info-card    { padding: 1.25rem; }
-  .alert-card   { padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
-  .drilldown-card { padding: 1.25rem; margin-bottom: 2rem; }
+  .kpi-icon .material-symbols-outlined {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .kpi-card.income   .kpi-icon { color: #059669; }
+  .kpi-card.expenses .kpi-icon { color: var(--tertiary); }
+  .kpi-card.balance  .kpi-icon { color: var(--primary); }
+  .kpi-card.income:hover   .kpi-icon { background: #059669; color: #fff; }
+  .kpi-card.expenses:hover .kpi-icon { background: var(--tertiary); color: #fff; }
+  .kpi-card.balance:hover  .kpi-icon { background: var(--primary);  color: #fff; }
 
-  /* ── summary card amounts ── */
-  .summary-card h3 {
-    font-size: 0.8rem; text-transform: uppercase; letter-spacing: .07em;
-    color: #6b7280; margin: 0 0 .5rem;
+  .kpi-trend {
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 2px;
   }
-  .summary-card .amount { font-size: 2rem; font-weight: 700; color: #012a4a; }
-  .summary-card.income .amount   { color: #059669; }
-  .summary-card.expenses .amount { color: #dc2626; }
-  .summary-card.balance .amount  { color: #2563eb; }
+  .kpi-trend .material-symbols-outlined { font-size: 14px; }
+  .kpi-trend.up   { color: #059669; }
+  .kpi-trend.down { color: var(--error); }
+  .kpi-trend.neutral { color: var(--on-surface-variant); }
 
-  /* ── chart card headings ── */
-  .chart-card h3, .info-card h3, .drilldown-card h3 {
-    font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 1rem;
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--on-surface-variant);
+    margin-bottom: 6px;
   }
-  .info-card h3 {
-    font-size: 0.8rem; text-transform: uppercase; letter-spacing: .07em;
-    color: #6b7280; margin: 0 0 .4rem;
+  .kpi-amount {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: var(--on-surface);
   }
-  .info-card p { font-size: 1.25rem; font-weight: 600; color: #012a4a; margin: 0; }
 
-  /* ── alerts ── */
-  .alert-card h3 { font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 .75rem; }
-  .alert-item {
-    display: flex; align-items: flex-start; gap: .5rem;
-    padding: .5rem .75rem; margin-bottom: .5rem;
-    background: #fff7ed; border-left: 3px solid #f59e0b;
-    border-radius: 6px; color: #92400e; font-size: .9rem;
+  /* ── Section card (base for all panels) ── */
+  .sc {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
   }
-  .alert-item:last-child { margin-bottom: 0; }
-
-  /* ── drill-down table ── */
-  #drilldown { display: none; }
-  #drilldown.visible { display: block; }
-  .dd-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-  .dd-table th {
-    text-align: left; padding: .5rem .75rem;
-    background: #012a4a; color: #fff; font-weight: 600;
+  .sc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
   }
-  .dd-table td { padding: .45rem .75rem; border-bottom: 1px solid #f3f4f6; color: #374151; }
-  .dd-table tr:last-child td { border-bottom: none; }
-  .dd-table tr:hover td { background: #f0fdfc; }
-  .dd-close {
-    float: right; cursor: pointer; font-size: .8rem;
-    color: #6b7280; text-decoration: underline; margin-top: .2rem;
+  .sc-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    line-height: 1.3;
   }
-  .dd-close:hover { color: #012a4a; }
-
-  /* ── pie clickable hint ── */
-  #pieChart { cursor: pointer; }
-  .pie-hint { font-size: .75rem; color: #9ca3af; margin: .4rem 0 0; text-align: center; }
-
-  .no-data { color: #9ca3af; font-size: .9rem; text-align: center; padding: 2rem 0; }
-  .section-title { font-size: 1rem; font-weight: 600; color: #012a4a; margin: 0 0 1rem; }
+  .sc-sub {
+    font-size: 12px;
+    color: var(--outline);
+    margin-top: 2px;
+  }
+  .sc-icon .material-symbols-outlined {
+    font-size: 22px;
+    color: var(--primary);
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
 
   /* ── Smart Insights ── */
-  .insights-panel {
-    margin-bottom: 2rem;
-  }
-  .insights-panel h2 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #012a4a;
-    margin: 0 0 .9rem;
-  }
   .insights-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
   }
   .insight-card {
     display: flex;
     align-items: flex-start;
-    gap: .75rem;
-    padding: .9rem 1rem;
-    border-radius: 10px;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
     border-left: 4px solid;
-    font-size: .88rem;
-    line-height: 1.45;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: transform 0.12s;
   }
-  .insight-card .i-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: .05rem; }
-  .insight-card .i-text { color: inherit; }
+  .insight-card:hover { transform: translateX(2px); }
+  .insight-card .i-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+  .insight-card.warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+  .insight-card.good    { background: #f0fdf4; border-color: #22c55e; color: #166534; }
+  .insight-card.info    { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+  .insight-card.danger  { background: #fff1f2; border-color: #ef4444; color: #991b1b; }
 
-  .insight-card.warning { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
-  .insight-card.good    { background:#f0fdf4; border-color:#22c55e; color:#166534; }
-  .insight-card.info    { background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
-  .insight-card.danger  { background:#fff1f2; border-color:#ef4444; color:#991b1b; }
+  /* ── Spending Alerts ── */
+  .alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    border-radius: 10px;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
 
-  /* ── Savings Forecast ── */
-  .forecast-banner {
+  /* ── Charts layout ── */
+  .charts-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 860px) { .charts-2col { grid-template-columns: 1fr; } }
+
+  .no-data {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--outline);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .no-data .material-symbols-outlined {
+    display: block;
+    font-size: 36px;
+    margin: 0 auto 10px;
+    color: var(--outline-variant);
+    font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 36;
+  }
+
+  #pieChart { cursor: pointer; }
+  .pie-hint {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.1rem 1.5rem;
-    border-radius: 10px;
-    margin-bottom: 1.75rem;
-    font-size: 1.05rem;
-    font-weight: 600;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--outline);
   }
-  .forecast-banner .fc-icon { font-size: 1.5rem; flex-shrink: 0; }
-  .forecast-banner.green { background: #f0fdf4; color: #166534; border: 1.5px solid #bbf7d0; }
-  .forecast-banner.red   { background: #fff1f2; color: #991b1b; border: 1.5px solid #fecdd3; }
-  .forecast-banner.grey  { background: #f9fafb; color: #6b7280; border: 1.5px solid #e5e7eb; }
+  .pie-hint .material-symbols-outlined {
+    font-size: 14px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 14;
+  }
+
+  /* ── Drill-down ── */
+  #drilldown { display: none; margin-bottom: 20px; }
+  #drilldown.visible { display: block; }
+  .dd-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--outline-variant);
+    margin-bottom: 0;
+  }
+  .dd-bar h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+  .dd-close {
+    background: none;
+    border: 1px solid var(--outline-variant);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .dd-close:hover { border-color: var(--primary); color: var(--primary); }
+  .dd-close .material-symbols-outlined { font-size: 13px; }
+  .dd-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 0;
+  }
+  .dd-table thead tr { background: var(--surface-container-low); }
+  .dd-table th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--outline);
+  }
+  .dd-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--outline-variant);
+    color: var(--on-surface);
+  }
+  .dd-table tr:last-child td { border-bottom: none; }
+  .dd-table tbody tr:hover td { background: var(--surface-container-low); }
+
+  /* ── Info grid ── */
+  .info-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 0;
+  }
+  @media (max-width: 860px) { .info-grid-2 { grid-template-columns: 1fr; } }
+
+  .proj-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--on-surface-variant);
+    margin-bottom: 8px;
+  }
+  .proj-amount {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--on-surface);
+    margin-bottom: 8px;
+  }
+  .proj-amount.positive { color: #059669; }
+  .proj-amount.negative { color: var(--error); }
+
+  /* Budget utilization */
+  .budget-row { margin-bottom: 14px; }
+  .budget-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+  }
+  .budget-cat { font-size: 13px; font-weight: 600; color: var(--on-surface); }
+  .budget-vals { font-size: 12px; color: var(--on-surface-variant); font-weight: 500; }
+  .budget-track {
+    height: 7px;
+    background: var(--surface-container-high);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 3px;
+  }
+  .budget-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.7s ease-out;
+  }
+  .budget-fill.ok   { background: var(--primary); }
+  .budget-fill.warn { background: #f59e0b; }
+  .budget-fill.over { background: var(--error); }
+  .budget-pct {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+  }
+  .budget-pct.ok   { color: var(--on-surface-variant); }
+  .budget-pct.warn { color: #d97706; }
+  .budget-pct.over { color: var(--error); }
+  .budget-edit-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 16px;
+    text-decoration: none;
+    transition: gap 0.15s;
+  }
+  .budget-edit-link:hover { gap: 8px; text-decoration: none; }
+  .budget-edit-link .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 16;
+  }
 </style>
 
-<h2 style="margin-bottom:1.25rem;color:#012a4a;">Dashboard</h2>
+<!-- ── Page Header ── -->
+<div class="dash-title-row fi-1">
+  <h2>Dashboard</h2>
+  <span class="dash-month-chip">
+    <span class="material-symbols-outlined">calendar_month</span>
+    Overview
+  </span>
+</div>
 
 <!-- ── Savings Forecast Banner ── -->
 {% if not transactions %}
-<div class="forecast-banner grey">
+<div class="forecast-banner grey fi-1">
   <span class="fc-icon">📁</span>
-  <span>Upload transactions to see your forecast</span>
+  <span class="fc-text">Upload transactions to see your forecast</span>
 </div>
 {% elif metrics.projection >= 0 %}
-<div class="forecast-banner green">
+<div class="forecast-banner green fi-1">
   <span class="fc-icon">📈</span>
-  <span>On track to save ₪{{ "%.0f"|format(metrics.projection) }} this month</span>
+  <span class="fc-text">On track to save ₪{{ "%.0f"|format(metrics.projection) }} this month</span>
+  <span class="fc-badge">On Track</span>
 </div>
 {% else %}
-<div class="forecast-banner red">
+<div class="forecast-banner red fi-1">
   <span class="fc-icon">📉</span>
-  <span>On track to overspend ₪{{ "%.0f"|format(metrics.projection | abs) }} this month</span>
+  <span class="fc-text">On track to overspend ₪{{ "%.0f"|format(metrics.projection | abs) }} this month</span>
+  <span class="fc-badge">At Risk</span>
 </div>
 {% endif %}
 
-<!-- ── Summary Cards ── -->
-<div class="summary-grid">
-  <div class="summary-card income">
-    <h3>Total Income</h3>
-    <div class="amount">₪{{ "%.2f"|format(metrics.total_income) }}</div>
+<!-- ── KPI Cards ── -->
+<div class="kpi-grid">
+
+  <div class="kpi-card income fi-2">
+    <div class="kpi-top">
+      <div class="kpi-icon">
+        <span class="material-symbols-outlined">account_balance_wallet</span>
+      </div>
+      <div class="kpi-trend up">
+        <span class="material-symbols-outlined">trending_up</span> Income
+      </div>
+    </div>
+    <div class="kpi-label">Total Income</div>
+    <div class="kpi-amount">₪{{ "%.2f"|format(metrics.total_income) }}</div>
   </div>
-  <div class="summary-card expenses">
-    <h3>Total Expenses</h3>
-    <div class="amount">₪{{ "%.2f"|format(metrics.total_expenses) }}</div>
+
+  <div class="kpi-card expenses fi-3">
+    <div class="kpi-top">
+      <div class="kpi-icon">
+        <span class="material-symbols-outlined">payments</span>
+      </div>
+      <div class="kpi-trend down">
+        <span class="material-symbols-outlined">trending_down</span> Expenses
+      </div>
+    </div>
+    <div class="kpi-label">Total Expenses</div>
+    <div class="kpi-amount">₪{{ "%.2f"|format(metrics.total_expenses) }}</div>
   </div>
-  <div class="summary-card balance">
-    <h3>Balance</h3>
-    <div class="amount">₪{{ "%.2f"|format(metrics.balance) }}</div>
+
+  <div class="kpi-card balance fi-4">
+    <div class="kpi-top">
+      <div class="kpi-icon">
+        <span class="material-symbols-outlined">savings</span>
+      </div>
+      <div class="kpi-trend {% if metrics.balance >= 0 %}up{% else %}down{% endif %}">
+        <span class="material-symbols-outlined">{% if metrics.balance >= 0 %}check_circle{% else %}warning{% endif %}</span>
+        {% if metrics.balance >= 0 %}Surplus{% else %}Deficit{% endif %}
+      </div>
+    </div>
+    <div class="kpi-label">Balance</div>
+    <div class="kpi-amount">₪{{ "%.2f"|format(metrics.balance) }}</div>
   </div>
+
 </div>
 
 <!-- ── Smart Insights ── -->
 {% if insights %}
-<div class="insights-panel">
-  <h2>Smart Insights</h2>
+<div class="sc fi-4">
+  <div class="sc-header" style="margin-bottom:16px;">
+    <div>
+      <div class="sc-title">Smart Insights</div>
+      <div class="sc-sub">Analysis of your spending patterns vs benchmarks</div>
+    </div>
+    <div class="sc-icon">
+      <span class="material-symbols-outlined">auto_awesome</span>
+    </div>
+  </div>
   <div class="insights-grid">
     {% for ins in insights %}
     <div class="insight-card {{ ins.type }}">
@@ -194,91 +508,157 @@
 
 <!-- ── Spending Alerts ── -->
 {% if alerts %}
-<div class="alert-card">
-  <h3>Spending Alerts</h3>
+<div class="sc fi-4">
+  <div class="sc-header" style="margin-bottom:8px;">
+    <div>
+      <div class="sc-title">Spending Alerts</div>
+      <div class="sc-sub">Categories with unusual activity this month</div>
+    </div>
+    <div class="sc-icon">
+      <span class="material-symbols-outlined" style="color:#d97706;">warning</span>
+    </div>
+  </div>
   {% for msg in alerts %}
     <div class="alert-item"><span>⚠️</span><span>{{ msg }}</span></div>
   {% endfor %}
 </div>
 {% endif %}
 
-<!-- ── Row 1: CBS bar + Pie (clickable) ── -->
-<div class="charts-grid">
-  <div class="chart-card">
-    <h3>My Spending vs CBS Average</h3>
+<!-- ── Charts: Bar + Pie ── -->
+<div class="charts-2col fi-5">
+
+  <div class="sc" style="margin-bottom:0;">
+    <div class="sc-header">
+      <div>
+        <div class="sc-title">My Spending vs CBS Average</div>
+        <div class="sc-sub">National benchmark comparison by category</div>
+      </div>
+    </div>
     {% if metrics.total_expenses > 0 %}
       <canvas id="cmpChart"></canvas>
     {% else %}
-      <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+      <div class="no-data">
+        <span class="material-symbols-outlined">bar_chart</span>
+        No expense data yet — import a CSV to see this chart.
+      </div>
     {% endif %}
   </div>
-  <div class="chart-card">
-    <h3>Spending by Category</h3>
+
+  <div class="sc" style="margin-bottom:0;">
+    <div class="sc-header">
+      <div>
+        <div class="sc-title">Spending by Category</div>
+        <div class="sc-sub">Click a slice to see transactions</div>
+      </div>
+    </div>
     {% if metrics.total_expenses > 0 %}
       <canvas id="pieChart"></canvas>
-      <p class="pie-hint">Click a slice to see transactions</p>
+      <p class="pie-hint">
+        <span class="material-symbols-outlined">touch_app</span>
+        Click a slice to drill down
+      </p>
     {% else %}
-      <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+      <div class="no-data">
+        <span class="material-symbols-outlined">pie_chart</span>
+        No expense data yet — import a CSV to see this chart.
+      </div>
     {% endif %}
   </div>
+
 </div>
 
 <!-- ── Category Drill-Down Table ── -->
-<div id="drilldown" class="drilldown-card">
-  <h3 id="ddTitle">Transactions</h3>
-  <span class="dd-close" onclick="closeDrilldown()">Close ✕</span>
+<div id="drilldown" class="sc">
+  <div class="dd-bar">
+    <h3 id="ddTitle">Transactions</h3>
+    <button class="dd-close" onclick="closeDrilldown()">
+      <span class="material-symbols-outlined">close</span>Close
+    </button>
+  </div>
   <table class="dd-table">
-    <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+    <thead>
+      <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+    </thead>
     <tbody id="ddBody"></tbody>
   </table>
 </div>
 
-<!-- ── Row 2: Monthly Trend (full width) ── -->
-<div class="chart-card" style="margin-bottom:2rem;">
-  <h3>Monthly Spending Trend — Last 6 Months</h3>
+<!-- ── Monthly Trend ── -->
+<div class="sc fi-6">
+  <div class="sc-header">
+    <div>
+      <div class="sc-title">Monthly Spending Trend — Last 6 Months</div>
+      <div class="sc-sub">Comparison over recent months</div>
+    </div>
+  </div>
   {% set has_trend = trend_values | select('gt', 0) | list | length > 0 %}
   {% if has_trend %}
     <canvas id="trendChart" height="80"></canvas>
   {% else %}
-    <p class="no-data">No expense data yet — import a CSV to see this chart.</p>
+    <div class="no-data">
+      <span class="material-symbols-outlined">show_chart</span>
+      No expense data yet — import a CSV to see this chart.
+    </div>
   {% endif %}
 </div>
 
-<!-- ── Projection + Budget ── -->
-<div class="info-grid" style="align-items:start;">
-  <div class="info-card">
-    <h3>End-of-Month Projection</h3>
-    <p>₪{{ "%.2f"|format(metrics.projection) }}</p>
+<!-- ── Projection + Budget Utilization ── -->
+<div class="info-grid-2 fi-7">
+
+  <!-- Projection -->
+  <div class="sc" style="margin-bottom:0;">
+    <div class="sc-header">
+      <div>
+        <div class="sc-title">End-of-Month Projection</div>
+        <div class="sc-sub">Based on daily spending average</div>
+      </div>
+      <div class="sc-icon"><span class="material-symbols-outlined">trending_up</span></div>
+    </div>
+    <div class="proj-label">Projected Balance</div>
+    <div class="proj-amount {% if metrics.projection >= 0 %}positive{% else %}negative{% endif %}">
+      ₪{{ "%.2f"|format(metrics.projection) }}
+    </div>
   </div>
-  <div class="info-card">
-    <h3>Budget Utilization</h3>
+
+  <!-- Budget Utilization -->
+  <div class="sc" style="margin-bottom:0;">
+    <div class="sc-header">
+      <div>
+        <div class="sc-title">Budget Utilization</div>
+        <div class="sc-sub">Monthly limits vs actual spending</div>
+      </div>
+      <div class="sc-icon"><span class="material-symbols-outlined">donut_large</span></div>
+    </div>
     {% if budget_breakdown %}
       {% for cat, data in budget_breakdown.items() %}
-      <div style="margin-bottom:.85rem;">
-        <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#374151;margin-bottom:.25rem;">
-          <span style="font-weight:600;">{{ cat }}</span>
-          <span>₪{{ "%.0f"|format(data.spent) }} / ₪{{ "%.0f"|format(data.goal) }}</span>
+      <div class="budget-row">
+        <div class="budget-row-head">
+          <span class="budget-cat">{{ cat }}</span>
+          <span class="budget-vals">₪{{ "%.0f"|format(data.spent) }} / ₪{{ "%.0f"|format(data.goal) }}</span>
         </div>
-        <div style="background:#f3f4f6;border-radius:999px;height:8px;overflow:hidden;">
-          <div style="
-            width:{{ [data.pct, 100] | min }}%;
-            height:100%;
-            border-radius:999px;
-            background:{% if data.pct >= 100 %}#dc2626{% elif data.pct >= 80 %}#f59e0b{% else %}#0fb5a3{% endif %};
-            transition:width .4s;
-          "></div>
+        <div class="budget-track">
+          <div class="budget-fill {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}"
+               style="width:{{ [data.pct, 100] | min }}%"></div>
         </div>
-        <div style="font-size:.75rem;color:{% if data.pct >= 100 %}#dc2626{% elif data.pct >= 80 %}#d97706{% else %}#6b7280{% endif %};margin-top:.15rem;text-align:right;">
+        <div class="budget-pct {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}">
           {{ data.pct }}%{% if data.pct >= 100 %} — over budget{% endif %}
         </div>
       </div>
       {% endfor %}
-      <a href="{{ url_for('budget') }}" style="font-size:.8rem;color:#0fb5a3;text-decoration:none;">Edit goals →</a>
+      <a href="{{ url_for('budget') }}" class="budget-edit-link">
+        Edit goals <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
     {% else %}
-      <p style="color:#9ca3af;font-size:0.9rem;margin:0;">No budget goals set.</p>
-      <a href="{{ url_for('budget') }}" style="font-size:.85rem;color:#0fb5a3;text-decoration:none;margin-top:.5rem;display:inline-block;">Set budget goals →</a>
+      <div class="no-data" style="padding:24px 0;">
+        <span class="material-symbols-outlined">savings</span>
+        No budget goals set yet.
+      </div>
+      <a href="{{ url_for('budget') }}" class="budget-edit-link">
+        Set budget goals <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
     {% endif %}
   </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -292,8 +672,8 @@
   const ALL_TX       = {{ transactions | tojson }};
 
   const COLORS = [
-    '#0fb5a3','#012a4a','#f59e0b','#6366f1',
-    '#10b981','#ef4444','#8b5cf6','#f97316'
+    '#005c55','#0f766e','#80d5cb','#213145',
+    '#565e74','#7f4025','#9c573a','#ffb598'
   ];
 
   /* ── 1. Bar: My Spending vs CBS ── */
@@ -304,8 +684,8 @@
       data: {
         labels: CAT_LABELS,
         datasets: [
-          { label: 'My Spending', data: MY_VALUES,  backgroundColor: '#0fb5a3', borderRadius: 4 },
-          { label: 'CBS Average', data: CBS_VALUES, backgroundColor: '#012a4a', borderRadius: 4 },
+          { label: 'My Spending', data: MY_VALUES,  backgroundColor: '#005c55', borderRadius: 6 },
+          { label: 'CBS Average', data: CBS_VALUES, backgroundColor: '#dce9ff', borderColor: '#bdc9c6', borderWidth: 1, borderRadius: 6 },
         ],
       },
       options: {
@@ -327,7 +707,7 @@
       type: 'pie',
       data: {
         labels: pieLabels,
-        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 1 }],
+        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fff' }],
       },
       options: {
         responsive: true,
@@ -361,13 +741,13 @@
         datasets: [{
           label: 'Total Spending',
           data: TREND_VALUES,
-          borderColor: '#0fb5a3',
-          backgroundColor: 'rgba(15,181,163,0.12)',
-          borderWidth: 2,
-          pointBackgroundColor: '#012a4a',
-          pointRadius: 4,
+          borderColor: '#005c55',
+          backgroundColor: 'rgba(0,92,85,0.07)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#213145',
+          pointRadius: 5,
           fill: true,
-          tension: 0.3,
+          tension: 0.35,
         }],
       },
       options: {
@@ -391,7 +771,7 @@
 
     const tbody = document.getElementById('ddBody');
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="color:#9ca3af;text-align:center;padding:1rem;">No transactions found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--outline);text-align:center;padding:1.5rem;">No transactions found.</td></tr>';
     } else {
       tbody.innerHTML = rows
         .sort((a, b) => b.date.localeCompare(a.date))

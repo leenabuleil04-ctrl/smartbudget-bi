@@ -1,15 +1,297 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card form-card">
-  <h2>Login</h2>
-  <form method="post">
-    <label>Email</label>
-    <input name="email" type="email" required />
 
-    <label>Password</label>
-    <input name="password" type="password" required />
+<style>
+  /* ── Login page layout ── */
+  .login-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    min-height: calc(100vh - 180px);
+    padding: 40px 0;
+  }
+  @media (max-width: 860px) {
+    .login-wrap { grid-template-columns: 1fr; min-height: auto; }
+    .login-deco  { display: none; }
+  }
 
-    <button class="btn" type="submit">Login</button>
-  </form>
+  /* ── Card ── */
+  .login-card {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--outline-variant);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    width: 100%;
+  }
+  .login-card h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    margin-bottom: 6px;
+  }
+  .login-card .subtitle {
+    font-size: 15px;
+    color: var(--on-surface-variant);
+    margin-bottom: 32px;
+  }
+
+  /* ── Form spacing ── */
+  .form-field { margin-bottom: 20px; }
+  .form-row    { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .form-row .remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+  }
+  .form-row .remember input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+  .form-row a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  /* ── Submit button ── */
+  .btn-login {
+    width: 100%;
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 14px 24px;
+    border-radius: 14px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: filter 0.15s, transform 0.1s;
+    box-shadow: 0 4px 12px rgba(0,92,85,0.25);
+  }
+  .btn-login:hover  { filter: brightness(1.1); }
+  .btn-login:active { transform: scale(0.98); }
+
+  /* ── Register link ── */
+  .login-footer {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(189,201,198,0.3);
+    text-align: center;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+  }
+  .login-footer a { font-weight: 700; color: var(--primary); }
+
+  /* ── Decorative right column ── */
+  .login-deco {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--surface-container-low), var(--surface-container));
+    min-height: 480px;
+    overflow: hidden;
+  }
+  .login-deco::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0,92,85,0.08) 0%, transparent 70%);
+  }
+  .login-deco-inner {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px;
+  }
+  .login-deco-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: var(--primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+  }
+  .login-deco-icon .material-symbols-outlined {
+    font-size: 40px;
+    color: var(--on-primary-container);
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 40;
+  }
+  .login-deco h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    margin-bottom: 12px;
+  }
+  .login-deco p {
+    font-size: 15px;
+    color: var(--on-surface-variant);
+    max-width: 280px;
+    line-height: 1.6;
+    margin: 0 auto 32px;
+  }
+  .deco-stats {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+  }
+  .deco-stat {
+    text-align: center;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.8);
+    border-radius: 12px;
+    padding: 14px 20px;
+    backdrop-filter: blur(4px);
+  }
+  .deco-stat .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .deco-stat .stat-label {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* ── Blob decorations ── */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(40px);
+    pointer-events: none;
+  }
+  .blob-1 {
+    width: 200px; height: 200px;
+    background: rgba(0,92,85,0.07);
+    top: -60px; right: -60px;
+  }
+  .blob-2 {
+    width: 260px; height: 260px;
+    background: rgba(127,64,37,0.05);
+    bottom: -80px; left: -80px;
+  }
+</style>
+
+<div class="login-wrap">
+
+  <!-- Left: Login card -->
+  <div>
+    <div class="login-card">
+      <h1>Log In to SmartBudget BI</h1>
+      <p class="subtitle">Financial Intelligence for Israeli Students</p>
+
+      <form method="post">
+        <div class="form-field">
+          <label for="email">Email Address</label>
+          <div class="input-icon-wrap has-right-icon">
+            <span class="material-symbols-outlined">mail</span>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="student@university.ac.il"
+              required
+              autocomplete="email"
+            >
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <div class="input-icon-wrap has-right-icon">
+            <span class="material-symbols-outlined">lock</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            >
+            <button type="button" class="icon-btn" id="togglePass" aria-label="Toggle password visibility">
+              <span class="material-symbols-outlined" id="toggleIcon">visibility</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="remember">
+            <input type="checkbox"> Remember me
+          </label>
+          <a href="#">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-login">
+          Login
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        Don't have an account?
+        <a href="{{ url_for('register') }}">Register</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Decorative panel -->
+  <div class="login-deco">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="login-deco-inner">
+      <div class="login-deco-icon">
+        <span class="material-symbols-outlined">account_balance_wallet</span>
+      </div>
+      <h2>Your Finances, Clarified</h2>
+      <p>Upload your bank CSV and get instant BI insights on your spending, budget, and savings trajectory.</p>
+      <div class="deco-stats">
+        <div class="deco-stat">
+          <div class="stat-num">8</div>
+          <div class="stat-label">Categories</div>
+        </div>
+        <div class="deco-stat">
+          <div class="stat-num">CBS</div>
+          <div class="stat-label">Benchmarks</div>
+        </div>
+        <div class="deco-stat">
+          <div class="stat-num">100%</div>
+          <div class="stat-label">Private</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+  const passInput = document.getElementById('password');
+  const toggleIcon = document.getElementById('toggleIcon');
+  document.getElementById('togglePass').addEventListener('click', () => {
+    const isPassword = passInput.type === 'password';
+    passInput.type = isPassword ? 'text' : 'password';
+    toggleIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
+  });
+</script>
+
 {% endblock %}

@@ -1,11 +1,449 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card">
-  <h2>Import Transactions</h2>
-  <p>Upload your CSV file here (CSV only for MVP).</p>
-  <form method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".csv" />
-    <button class="btn" type="submit">Upload</button>
+
+<style>
+  main.container { padding-top: 32px; padding-bottom: 60px; }
+
+  .import-wrap { max-width: 720px; margin: 0 auto; }
+
+  /* ── Page header ── */
+  .import-header { margin-bottom: 32px; }
+  .import-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    margin-bottom: 8px;
+  }
+  .import-header p {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--on-surface-variant);
+    max-width: 560px;
+  }
+
+  /* ── Dashed upload zone ── */
+  .upload-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    padding: 40px 32px;
+    background: #ffffff;
+    /* SVG dashed border — teal #0F766E, 12px dash, 16px radius */
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%230F766EFF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    border-radius: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+  }
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    background-color: rgba(0, 92, 85, 0.04);
+  }
+  .upload-zone.has-file {
+    background-color: rgba(0, 92, 85, 0.03);
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23005c55FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+  }
+
+  /* icon ring */
+  .upload-icon-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--primary-fixed);   /* #9cf2e8 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .upload-zone:hover .upload-icon-ring,
+  .upload-zone.drag-over .upload-icon-ring {
+    transform: scale(1.08);
+  }
+  .upload-icon-ring .material-symbols-outlined {
+    font-size: 36px;
+    color: var(--primary);
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 36;
+  }
+
+  .upload-headline {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+  }
+  .upload-headline .browse-link {
+    color: var(--primary);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .upload-sub {
+    font-size: 14px;
+    color: var(--on-surface-variant);
+  }
+  .upload-sub strong { color: var(--on-surface); }
+
+  /* hidden file input covers the whole zone so clicking anywhere opens dialog */
+  .file-input-hidden {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* ── File info card (appears after selection) ── */
+  .file-info-card {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .file-info-card.visible { display: flex; }
+
+  .file-icon-box {
+    width: 40px;
+    height: 40px;
+    background: var(--surface-container);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .file-icon-box .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--on-surface-variant);
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .file-info-text { flex: 1; min-width: 0; }
+  .file-info-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-info-meta {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+  .file-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--outline);
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .file-remove:hover { color: var(--error); background: var(--error-container); }
+  .file-remove .material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+
+  /* ── Processing indicator (shown on submit) ── */
+  .processing-bar { display: none; margin-bottom: 16px; }
+  .processing-bar.visible { display: block; }
+  .proc-track {
+    height: 6px;
+    width: 100%;
+    background: var(--surface-container);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .proc-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--primary-container);   /* #0f766e */
+    box-shadow: 0 0 10px rgba(15,118,110,0.35);
+    animation: procIndeterminate 1.6s ease-in-out infinite;
+  }
+  @keyframes procIndeterminate {
+    0%   { width: 10%; margin-left: 0; }
+    50%  { width: 55%; margin-left: 22%; }
+    100% { width: 10%; margin-left: 90%; }
+  }
+  .proc-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+  .proc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: procPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes procPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* ── Submit button ── */
+  .btn-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 14px 24px;
+    border-radius: 14px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+    box-shadow: 0 4px 12px rgba(0,92,85,0.25);
+    margin-bottom: 32px;
+  }
+  .btn-upload:hover  { filter: brightness(1.1); }
+  .btn-upload:active { transform: scale(0.99); }
+  .btn-upload:disabled {
+    background: var(--outline-variant);
+    box-shadow: none;
+    cursor: not-allowed;
+    filter: none;
+    color: var(--outline);
+  }
+  .btn-upload .material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+  }
+
+  /* ── Tips grid ── */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 600px) { .tips-grid { grid-template-columns: 1fr; } }
+
+  .tip-card {
+    display: flex;
+    gap: 14px;
+    padding: 18px 20px;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+  }
+  .tip-card > .material-symbols-outlined {
+    font-size: 22px;
+    color: var(--primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .tip-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin-bottom: 4px;
+  }
+  .tip-card p {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--on-surface-variant);
+  }
+</style>
+
+<div class="import-wrap">
+
+  <!-- ── Page header ── -->
+  <div class="import-header">
+    <h2>Import Transactions</h2>
+    <p>Upload your bank or credit card statement in CSV format to analyze your spending.</p>
+  </div>
+
+  <!-- ── Form — preserves method, enctype, and input name ── -->
+  <form method="post" enctype="multipart/form-data" id="importForm">
+
+    <!-- Dashed upload zone -->
+    <div class="upload-zone" id="dropzone">
+      <div class="upload-icon-ring">
+        <span class="material-symbols-outlined">upload</span>
+      </div>
+      <p class="upload-headline" id="uploadHeadline">
+        Drag and drop your CSV file or
+        <span class="browse-link">Browse Files</span>
+      </p>
+      <p class="upload-sub">Supported format: <strong>CSV</strong></p>
+      <!-- Covers entire zone — click anywhere opens file dialog -->
+      <input
+        type="file"
+        name="file"
+        accept=".csv"
+        id="fileInput"
+        class="file-input-hidden"
+      >
+    </div>
+
+    <!-- File info card (shown after file selected) -->
+    <div class="file-info-card" id="fileInfoCard">
+      <div class="file-icon-box">
+        <span class="material-symbols-outlined">description</span>
+      </div>
+      <div class="file-info-text">
+        <div class="file-info-name" id="fileName">—</div>
+        <div class="file-info-meta" id="fileMeta">CSV File</div>
+      </div>
+      <button type="button" class="file-remove" id="removeFile" title="Remove file">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Processing indicator (shown on submit) -->
+    <div class="processing-bar" id="processingBar">
+      <div class="proc-track"><div class="proc-fill"></div></div>
+      <div class="proc-label">
+        <div class="proc-dot"></div>
+        Processing your CSV file…
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="btn-upload" id="submitBtn" disabled>
+      <span class="material-symbols-outlined">upload_file</span>
+      Upload &amp; Analyze
+    </button>
+
   </form>
+
+  <!-- ── Tips ── -->
+  <div class="tips-grid">
+    <div class="tip-card">
+      <span class="material-symbols-outlined">security</span>
+      <div>
+        <h4>Secure Data Handling</h4>
+        <p>Your financial data is encrypted and never shared with third parties.</p>
+      </div>
+    </div>
+    <div class="tip-card">
+      <span class="material-symbols-outlined">auto_awesome</span>
+      <div>
+        <h4>Smart Categorization</h4>
+        <p>Hebrew keyword matching automatically tags each transaction by category.</p>
+      </div>
+    </div>
+    <div class="tip-card">
+      <span class="material-symbols-outlined">table_view</span>
+      <div>
+        <h4>Required CSV Columns</h4>
+        <p>Your file must include date, description, and amount columns.</p>
+      </div>
+    </div>
+    <div class="tip-card">
+      <span class="material-symbols-outlined">bar_chart</span>
+      <div>
+        <h4>Instant Insights</h4>
+        <p>After upload, visit the Dashboard to see your spending breakdown.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+  const fileInput      = document.getElementById('fileInput');
+  const dropzone       = document.getElementById('dropzone');
+  const fileInfoCard   = document.getElementById('fileInfoCard');
+  const fileNameEl     = document.getElementById('fileName');
+  const fileMetaEl     = document.getElementById('fileMeta');
+  const removeBtn      = document.getElementById('removeFile');
+  const submitBtn      = document.getElementById('submitBtn');
+  const importForm     = document.getElementById('importForm');
+  const processingBar  = document.getElementById('processingBar');
+  const uploadHeadline = document.getElementById('uploadHeadline');
+
+  function formatBytes(b) {
+    if (b < 1024)           return b + ' B';
+    if (b < 1024 * 1024)    return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function setFile(file) {
+    fileNameEl.textContent = file.name;
+    fileMetaEl.textContent = formatBytes(file.size) + ' • CSV File';
+    fileInfoCard.classList.add('visible');
+    dropzone.classList.add('has-file');
+    submitBtn.disabled = false;
+    uploadHeadline.innerHTML =
+      'File selected — <span class="browse-link">Choose a different file</span>';
+  }
+
+  function clearFile() {
+    fileInput.value = '';
+    fileInfoCard.classList.remove('visible');
+    dropzone.classList.remove('has-file');
+    submitBtn.disabled = true;
+    uploadHeadline.innerHTML =
+      'Drag and drop your CSV file or <span class="browse-link">Browse Files</span>';
+  }
+
+  fileInput.addEventListener('change', () => {
+    fileInput.files.length ? setFile(fileInput.files[0]) : clearFile();
+  });
+
+  removeBtn.addEventListener('click', clearFile);
+
+  /* Drag-and-drop */
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('drag-over');
+  });
+  ['dragleave', 'dragend'].forEach(ev =>
+    dropzone.addEventListener(ev, () => dropzone.classList.remove('drag-over'))
+  );
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.toLowerCase().endsWith('.csv')) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+      } catch (_) { /* Safari fallback — form submit still works */ }
+      setFile(file);
+    }
+  });
+
+  /* Show processing state on submit */
+  importForm.addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML =
+      '<span class="material-symbols-outlined">hourglass_empty</span> Processing…';
+    processingBar.classList.add('visible');
+  });
+</script>
+
 {% endblock %}

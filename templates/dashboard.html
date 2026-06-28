@@ -163,17 +163,38 @@
 </div>
 
 <!-- ── Projection + Budget ── -->
-<div class="info-grid">
+<div class="info-grid" style="align-items:start;">
   <div class="info-card">
     <h3>End-of-Month Projection</h3>
     <p>₪{{ "%.2f"|format(metrics.projection) }}</p>
   </div>
   <div class="info-card">
     <h3>Budget Utilization</h3>
-    {% if budget_utilization is not none %}
-      <p>{{ budget_utilization }}%</p>
+    {% if budget_breakdown %}
+      {% for cat, data in budget_breakdown.items() %}
+      <div style="margin-bottom:.85rem;">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#374151;margin-bottom:.25rem;">
+          <span style="font-weight:600;">{{ cat }}</span>
+          <span>₪{{ "%.0f"|format(data.spent) }} / ₪{{ "%.0f"|format(data.goal) }}</span>
+        </div>
+        <div style="background:#f3f4f6;border-radius:999px;height:8px;overflow:hidden;">
+          <div style="
+            width:{{ [data.pct, 100] | min }}%;
+            height:100%;
+            border-radius:999px;
+            background:{% if data.pct >= 100 %}#dc2626{% elif data.pct >= 80 %}#f59e0b{% else %}#0fb5a3{% endif %};
+            transition:width .4s;
+          "></div>
+        </div>
+        <div style="font-size:.75rem;color:{% if data.pct >= 100 %}#dc2626{% elif data.pct >= 80 %}#d97706{% else %}#6b7280{% endif %};margin-top:.15rem;text-align:right;">
+          {{ data.pct }}%{% if data.pct >= 100 %} — over budget{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      <a href="{{ url_for('budget') }}" style="font-size:.8rem;color:#0fb5a3;text-decoration:none;">Edit goals →</a>
     {% else %}
-      <p style="color:#9ca3af;font-size:0.9rem;">No budget goals set</p>
+      <p style="color:#9ca3af;font-size:0.9rem;margin:0;">No budget goals set.</p>
+      <a href="{{ url_for('budget') }}" style="font-size:.85rem;color:#0fb5a3;text-decoration:none;margin-top:.5rem;display:inline-block;">Set budget goals →</a>
     {% endif %}
   </div>
 </div>

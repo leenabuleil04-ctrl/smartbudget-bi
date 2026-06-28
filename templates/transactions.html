@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header h2 { color: #012a4a; margin: 0; }
+  .page-header .count {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  .tx-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+
+  .tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .tx-table thead tr {
+    background: #012a4a;
+    color: #fff;
+  }
+  .tx-table th {
+    padding: .65rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .tx-table td {
+    padding: .6rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+  }
+  .tx-table tr:last-child td { border-bottom: none; }
+  .tx-table tr:hover td { background: #f0fdfc; }
+
+  .amount-neg { color: #dc2626; font-weight: 600; }
+  .amount-pos { color: #059669; font-weight: 600; }
+
+  .cat-badge {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 3rem;
+    color: #9ca3af;
+  }
+  .no-data a { color: #0fb5a3; }
+</style>
+
+<div class="page-header">
+  <h2>Transactions</h2>
+  <span class="count">{{ transactions | length }} records</span>
+</div>
+
+<div class="tx-card">
+  {% if transactions %}
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Amount (₪)</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td>{{ t.date }}</td>
+          <td>{{ t.description or '—' }}</td>
+          <td class="{{ 'amount-neg' if (t.amount | float) < 0 else 'amount-pos' }}">
+            {{ "%.2f" | format(t.amount | float) }}
+          </td>
+          <td><span class="cat-badge">{{ t.category }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="no-data">
+      <p>No transactions yet.</p>
+      <p><a href="{{ url_for('import_page') }}">Import a CSV file</a> to get started.</p>
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

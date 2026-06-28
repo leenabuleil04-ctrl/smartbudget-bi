@@ -15,6 +15,8 @@
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
         <a href="{{ url_for('import_page') }}">Import</a>
         {% if session.get('user') %}
+          <a href="{{ url_for('transactions_page') }}">Transactions</a>
+          <a href="{{ url_for('budget') }}">Budget</a>
           <a href="{{ url_for('logout') }}">Logout</a>
         {% else %}
           <a href="{{ url_for('login') }}">Login</a>

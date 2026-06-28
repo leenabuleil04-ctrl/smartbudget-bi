@@ -64,18 +64,20 @@ def dashboard():
         pass
     cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]
 
-    # budget utilization
-    budget_util = None
+    # per-category budget breakdown
+    budget_breakdown = {}
     try:
-        res = supabase.table('budget_goals').select('*').eq('student_id', user['id']).execute()
-        err = getattr(res, 'error', None)
-        if not err and res.data:
-            total_budget = sum((b.get('amount') or 0) for b in res.data)
-            spent = sum(metrics['by_category'].values())
-            if total_budget > 0:
-                budget_util = round((spent / total_budget) * 100, 1)
+        res = supabase.table('budget_goals').select('category,monthly_limit_ils').eq('student_id', user['id']).execute()
+        if not getattr(res, 'error', None) and res.data:
+            for row in res.data:
+                cat = row.get('category')
+                goal = float(row.get('monthly_limit_ils') or 0)
+                if cat and goal > 0:
+                    spent = metrics['by_category'].get(cat, 0.0)
+                    pct = min(round((spent / goal) * 100, 1), 999)
+                    budget_breakdown[cat] = {'goal': goal, 'spent': spent, 'pct': pct}
     except Exception:
-        budget_util = None
+        pass
 
     return render_template(
         'dashboard.html',
@@ -83,7 +85,7 @@ def dashboard():
         cat_labels=cat_labels,
         cat_values=cat_values,
         cbs_values=cbs_values,
-        budget_utilization=budget_util,
+        budget_breakdown=budget_breakdown,
         trend_labels=trend_labels,
         trend_values=trend_values,
         alerts=alerts,
@@ -138,6 +140,65 @@ def import_page():
             return redirect(url_for('import_page'))
 
     return render_template('import.html')
+
+
+@app.route('/transactions')
+def transactions_page():
+    user = session.get('user')
+    if not user:
+        flash('Please log in to view transactions', 'error')
+        return redirect(url_for('login'))
+
+    transactions = []
+    try:
+        res = supabase.table('transactions').select('*') \
+            .eq('student_id', user['id']).order('date', desc=True).execute()
+        if not getattr(res, 'error', None):
+            transactions = res.data or []
+    except Exception:
+        transactions = []
+
+    return render_template('transactions.html', transactions=transactions)
+
+
+@app.route('/budget', methods=['GET', 'POST'])
+def budget():
+    user = session.get('user')
+    if not user:
+        flash('Please log in to set budget goals', 'error')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        try:
+            supabase.table('budget_goals').delete().eq('student_id', user['id']).execute()
+            records = []
+            for cat in ALLOWED_CATEGORIES:
+                raw = request.form.get(cat, '').strip()
+                if raw:
+                    try:
+                        amount = round(float(raw), 2)
+                        if amount > 0:
+                            records.append({'student_id': user['id'], 'category': cat, 'monthly_limit_ils': amount})
+                    except ValueError:
+                        pass
+            if records:
+                supabase.table('budget_goals').insert(records).execute()
+            flash('Budget goals saved', 'success')
+        except Exception as e:
+            flash(f'Error saving budget goals: {e}', 'error')
+        return redirect(url_for('budget'))
+
+    goals = {}
+    try:
+        res = supabase.table('budget_goals').select('category,monthly_limit_ils') \
+            .eq('student_id', user['id']).execute()
+        if not getattr(res, 'error', None) and res.data:
+            for row in res.data:
+                goals[row['category']] = row['monthly_limit_ils']
+    except Exception:
+        pass
+
+    return render_template('budget.html', goals=goals, categories=ALLOWED_CATEGORIES)
 
 
 @app.route('/register', methods=['GET', 'POST'])

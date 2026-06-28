@@ -65,12 +65,99 @@
     color: #9ca3af;
   }
   .no-data a { color: #0fb5a3; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: flex-end;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: .25rem; }
+  .filter-group label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; font-weight: 600; }
+  .filter-group select,
+  .filter-group input[type="date"],
+  .filter-group input[type="text"] {
+    padding: .4rem .65rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: .9rem;
+    color: #111827;
+    background: #fff;
+    min-width: 130px;
+  }
+  .filter-group select:focus,
+  .filter-group input:focus {
+    outline: none;
+    border-color: #0fb5a3;
+    box-shadow: 0 0 0 2px rgba(15,181,163,.15);
+  }
+  .filter-group input[type="text"] { min-width: 180px; }
+  .btn-filter {
+    background: #012a4a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: .42rem 1.1rem;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-end;
+    transition: background .15s;
+  }
+  .btn-filter:hover { background: #0fb5a3; }
+  .btn-clear {
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: .42rem .9rem;
+    font-size: .85rem;
+    color: #6b7280;
+    cursor: pointer;
+    align-self: flex-end;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-clear:hover { border-color: #012a4a; color: #012a4a; }
 </style>
 
 <div class="page-header">
   <h2>Transactions</h2>
   <span class="count">{{ transactions | length }} records</span>
 </div>
+
+<!-- ── Filter Bar ── -->
+<form method="GET" action="{{ url_for('transactions_page') }}" class="filter-bar">
+  <div class="filter-group">
+    <label for="f_category">Category</label>
+    <select id="f_category" name="category">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}" {% if f_category == cat %}selected{% endif %}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="f_date_from">From</label>
+    <input type="date" id="f_date_from" name="date_from" value="{{ f_date_from }}">
+  </div>
+  <div class="filter-group">
+    <label for="f_date_to">To</label>
+    <input type="date" id="f_date_to" name="date_to" value="{{ f_date_to }}">
+  </div>
+  <div class="filter-group">
+    <label for="f_search">Search</label>
+    <input type="text" id="f_search" name="search" placeholder="Description…" value="{{ f_search }}">
+  </div>
+  <button type="submit" class="btn-filter">Filter</button>
+  {% if f_category or f_date_from or f_date_to or f_search %}
+  <a href="{{ url_for('transactions_page') }}" class="btn-clear">Clear</a>
+  {% endif %}
+</form>
 
 <div class="tx-card">
   {% if transactions %}

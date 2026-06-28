@@ -99,50 +99,69 @@ def compute_monthly_trend(transactions):
 def generate_insights(spending_by_category, cbs_benchmarks, budget_goals):
     """Return a list of insight dicts: {type, icon, text}.
 
-    spending_by_category : {category: float}   — expenses this month (positive)
-    cbs_benchmarks       : {category: float}   — monthly CBS averages
-    budget_goals         : {category: float}   — user's monthly limits
-    types: 'warning', 'good', 'info', 'danger'
+    spending_by_category : {category: float}         — expenses this month (positive)
+    cbs_benchmarks       : list of dicts from Supabase, keys: category, monthly_avg
+    budget_goals         : list of dicts from Supabase, keys: category, monthly_limit_ils
     """
+    # normalise raw Supabase lists into lookup dicts
+    cbs_map = {
+        row['category']: float(row.get('monthly_avg') or 0)
+        for row in (cbs_benchmarks or [])
+        if row.get('category')
+    }
+    goals_map = {
+        row['category']: float(row.get('monthly_limit_ils') or 0)
+        for row in (budget_goals or [])
+        if row.get('category')
+    }
+
     insights = []
 
-    # biggest expense category (info)
-    if spending_by_category:
-        top_cat = max(spending_by_category, key=lambda c: spending_by_category[c])
-        top_amt = spending_by_category[top_cat]
-        if top_amt > 0:
-            insights.append({
-                'type': 'info',
-                'icon': '📊',
-                'text': f'Your biggest expense this month is {top_cat} at ₪{top_amt:,.0f}.',
-            })
+    # highest spending category — info, 📊
+    categories_with_spend = {c: v for c, v in spending_by_category.items() if v > 0}
+    if categories_with_spend:
+        top_cat = max(categories_with_spend, key=categories_with_spend.get)
+        top_amt = categories_with_spend[top_cat]
+        insights.append({
+            'type': 'info',
+            'icon': '📊',
+            'text': f'Your biggest expense this month is {top_cat} at ₪{top_amt:,.0f}.',
+        })
 
     for cat in CATEGORY_ORDER:
         spent = spending_by_category.get(cat, 0.0)
-        benchmark = cbs_benchmarks.get(cat, 0.0)
-        goal = budget_goals.get(cat, 0.0)
+        benchmark = cbs_map.get(cat, 0.0)
+        goal = goals_map.get(cat, 0.0)
 
-        # exceeded budget goal (danger)
+        # exceeded budget goal — danger, 💸
         if goal > 0 and spent > goal:
             over_pct = round((spent / goal - 1) * 100)
             insights.append({
                 'type': 'danger',
-                'icon': '🚨',
+                'icon': '💸',
                 'text': f'You exceeded your {cat} budget by {over_pct}% (₪{spent:,.0f} vs ₪{goal:,.0f} limit).',
             })
 
-        if benchmark > 0:
-            # spending 2× or more above CBS benchmark (warning)
-            if spent >= benchmark * 2:
-                multiple = round(spent / benchmark, 1)
+        if benchmark > 0 and spent > 0:
+            ratio = spent / benchmark
+            if ratio >= 2.0:
+                # 2x+ CBS average — danger, 🚨
+                insights.append({
+                    'type': 'danger',
+                    'icon': '🚨',
+                    'text': f'You spent {ratio:.1f}× the national average on {cat} (₪{spent:,.0f} vs ₪{benchmark:,.0f} avg).',
+                })
+            elif ratio >= 1.2:
+                # 1.2x–2x CBS average — warning, ⚠️
+                pct_over = round((ratio - 1) * 100)
                 insights.append({
                     'type': 'warning',
                     'icon': '⚠️',
-                    'text': f'You spent {multiple}× the national average on {cat} (₪{spent:,.0f} vs ₪{benchmark:,.0f} avg).',
+                    'text': f'You spent {pct_over}% above the national average on {cat} (₪{spent:,.0f} vs ₪{benchmark:,.0f} avg).',
                 })
-            # well under benchmark — spending ≤50% of CBS average (good)
-            elif spent > 0 and spent <= benchmark * 0.5:
-                saving_pct = round((1 - spent / benchmark) * 100)
+            elif ratio <= 0.7:
+                # ≤70% of CBS average — good, ✅
+                saving_pct = round((1 - ratio) * 100)
                 insights.append({
                     'type': 'good',
                     'icon': '✅',

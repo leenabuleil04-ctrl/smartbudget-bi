@@ -52,23 +52,26 @@ def dashboard():
     # spending alerts vs last month
     alerts = compute_spending_alerts(transactions)
 
-    # CBS benchmark data per category (uses category + monthly_avg columns)
+    # CBS benchmark data — keep raw list for insights, build dict for chart
+    cbs_benchmarks_raw = []
     cbs_by_category = {}
     try:
         res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
-        err = getattr(res, 'error', None)
-        if not err and res.data:
+        if not getattr(res, 'error', None) and res.data:
+            cbs_benchmarks_raw = res.data
             for row in res.data:
                 cbs_by_category[row['category']] = float(row.get('monthly_avg', 0) or 0)
     except Exception:
         pass
     cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]
 
-    # per-category budget breakdown
+    # per-category budget breakdown — keep raw list for insights
+    budget_goals_raw = []
     budget_breakdown = {}
     try:
         res = supabase.table('budget_goals').select('category,monthly_limit_ils').eq('student_id', user['id']).execute()
         if not getattr(res, 'error', None) and res.data:
+            budget_goals_raw = res.data
             for row in res.data:
                 cat = row.get('category')
                 goal = float(row.get('monthly_limit_ils') or 0)
@@ -79,8 +82,7 @@ def dashboard():
     except Exception:
         pass
 
-    budget_goals_map = {cat: data['goal'] for cat, data in budget_breakdown.items()}
-    insights = generate_insights(metrics['by_category'], cbs_by_category, budget_goals_map)
+    insights = generate_insights(metrics['by_category'], cbs_benchmarks_raw, budget_goals_raw)
 
     return render_template(
         'dashboard.html',
@@ -153,16 +155,37 @@ def transactions_page():
         flash('Please log in to view transactions', 'error')
         return redirect(url_for('login'))
 
+    f_category  = request.args.get('category', '').strip()
+    f_date_from = request.args.get('date_from', '').strip()
+    f_date_to   = request.args.get('date_to', '').strip()
+    f_search    = request.args.get('search', '').strip()
+
     transactions = []
     try:
-        res = supabase.table('transactions').select('*') \
-            .eq('student_id', user['id']).order('date', desc=True).execute()
+        q = supabase.table('transactions').select('*').eq('student_id', user['id'])
+        if f_category:
+            q = q.eq('category', f_category)
+        if f_date_from:
+            q = q.gte('date', f_date_from)
+        if f_date_to:
+            q = q.lte('date', f_date_to)
+        if f_search:
+            q = q.ilike('description', f'%{f_search}%')
+        res = q.order('date', desc=True).execute()
         if not getattr(res, 'error', None):
             transactions = res.data or []
     except Exception:
         transactions = []
 
-    return render_template('transactions.html', transactions=transactions)
+    return render_template(
+        'transactions.html',
+        transactions=transactions,
+        categories=ALLOWED_CATEGORIES,
+        f_category=f_category,
+        f_date_from=f_date_from,
+        f_date_to=f_date_to,
+        f_search=f_search,
+    )
 
 
 @app.route('/budget', methods=['GET', 'POST'])

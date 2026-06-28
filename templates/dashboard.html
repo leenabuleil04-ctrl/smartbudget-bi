@@ -119,13 +119,47 @@
   .insight-card .i-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: .05rem; }
   .insight-card .i-text { color: inherit; }
 
-  .insight-card.warning  { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
-  .insight-card.good     { background:#f0fdf4; border-color:#22c55e; color:#166534; }
-  .insight-card.info     { background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
-  .insight-card.danger   { background:#fff1f2; border-color:#ef4444; color:#991b1b; }
+  .insight-card.warning { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+  .insight-card.good    { background:#f0fdf4; border-color:#22c55e; color:#166534; }
+  .insight-card.info    { background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
+  .insight-card.danger  { background:#fff1f2; border-color:#ef4444; color:#991b1b; }
+
+  /* ── Savings Forecast ── */
+  .forecast-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.75rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .forecast-banner .fc-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .forecast-banner.green { background: #f0fdf4; color: #166534; border: 1.5px solid #bbf7d0; }
+  .forecast-banner.red   { background: #fff1f2; color: #991b1b; border: 1.5px solid #fecdd3; }
+  .forecast-banner.grey  { background: #f9fafb; color: #6b7280; border: 1.5px solid #e5e7eb; }
 </style>
 
-<h2 style="margin-bottom:1.5rem;color:#012a4a;">Dashboard</h2>
+<h2 style="margin-bottom:1.25rem;color:#012a4a;">Dashboard</h2>
+
+<!-- ── Savings Forecast Banner ── -->
+{% if not transactions %}
+<div class="forecast-banner grey">
+  <span class="fc-icon">📁</span>
+  <span>Upload transactions to see your forecast</span>
+</div>
+{% elif metrics.projection >= 0 %}
+<div class="forecast-banner green">
+  <span class="fc-icon">📈</span>
+  <span>On track to save ₪{{ "%.0f"|format(metrics.projection) }} this month</span>
+</div>
+{% else %}
+<div class="forecast-banner red">
+  <span class="fc-icon">📉</span>
+  <span>On track to overspend ₪{{ "%.0f"|format(metrics.projection | abs) }} this month</span>
+</div>
+{% endif %}
 
 <!-- ── Summary Cards ── -->
 <div class="summary-grid">

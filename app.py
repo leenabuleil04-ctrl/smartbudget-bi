@@ -701,7 +701,7 @@ def login():
                 'name': student.get('name'),
             }
             flash('Logged in successfully', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('import_page'))
         except AuthApiError as e:
             flash(f'Login error: {e}', 'error')
             return redirect(url_for('login'))

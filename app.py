@@ -106,8 +106,19 @@ def dashboard():
         res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
         if not getattr(res, 'error', None) and res.data:
             cbs_benchmarks_raw = res.data
+            # Average multiple rows per category before building chart values
+            _cbs_sums: dict = {}
+            _cbs_counts: dict = {}
             for row in res.data:
-                cbs_by_category[row['category']] = float(row.get('monthly_avg', 0) or 0)
+                cat = row['category']
+                val = float(row.get('monthly_avg', 0) or 0)
+                if val > 0:
+                    _cbs_sums[cat]   = _cbs_sums.get(cat, 0.0) + val
+                    _cbs_counts[cat] = _cbs_counts.get(cat, 0)  + 1
+            cbs_by_category = {
+                cat: _cbs_sums[cat] / _cbs_counts[cat]
+                for cat in _cbs_sums
+            }
     except Exception:
         pass
     cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]

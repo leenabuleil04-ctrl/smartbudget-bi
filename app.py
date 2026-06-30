@@ -28,14 +28,14 @@ except Exception:
 
 # ── CBS benchmark seed data (Feature 2) ──
 CBS_BENCHMARK_DATA = [
-    {'category': 'Food',          'monthly_avg': 820},
-    {'category': 'Rent',          'monthly_avg': 2200},
-    {'category': 'Transport',     'monthly_avg': 350},
-    {'category': 'Entertainment', 'monthly_avg': 280},
-    {'category': 'Education',     'monthly_avg': 450},
-    {'category': 'Health',        'monthly_avg': 180},
-    {'category': 'Shopping',      'monthly_avg': 420},
-    {'category': 'Other',         'monthly_avg': 200},
+    {'category': 'Food',          'monthly_avg': 1200},
+    {'category': 'Rent',          'monthly_avg': 2800},
+    {'category': 'Transport',     'monthly_avg': 600},
+    {'category': 'Entertainment', 'monthly_avg': 400},
+    {'category': 'Education',     'monthly_avg': 500},
+    {'category': 'Health',        'monthly_avg': 300},
+    {'category': 'Shopping',      'monthly_avg': 800},
+    {'category': 'Other',         'monthly_avg': 400},
 ]
 
 
@@ -43,9 +43,6 @@ def seed_cbs_benchmarks():
     if supabase is None:
         return
     try:
-        res = supabase.table('cbs_benchmarks').select('category').execute()
-        if res.data:
-            return  # already seeded
         supabase.table('cbs_benchmarks').upsert(
             CBS_BENCHMARK_DATA, on_conflict='category'
         ).execute()
@@ -118,9 +115,9 @@ def dashboard():
             _cbs_sums: dict = {}
             _cbs_counts: dict = {}
             for row in res.data:
-                cat = row['category']
+                cat = (row.get('category') or '').strip()
                 val = float(row.get('monthly_avg', 0) or 0)
-                if val > 0:
+                if cat and val > 0:
                     _cbs_sums[cat]   = _cbs_sums.get(cat, 0.0) + val
                     _cbs_counts[cat] = _cbs_counts.get(cat, 0)  + 1
             cbs_by_category = {

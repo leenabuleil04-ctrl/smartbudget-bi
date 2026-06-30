@@ -603,6 +603,22 @@ def delete_month_transactions():
     return redirect(url_for('transactions_page'))
 
 
+@app.route('/transactions/delete-all', methods=['POST'])
+def delete_all_transactions():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    if request.form.get('confirm', '').strip() != 'DELETE':
+        flash('Type DELETE in the confirmation box to wipe all transactions.', 'error')
+        return redirect(url_for('transactions_page'))
+    try:
+        supabase.table('transactions').delete().eq('student_id', user['id']).execute()
+        flash('All your transactions have been permanently deleted.', 'info')
+    except Exception as e:
+        flash(f'Error deleting transactions: {e}', 'error')
+    return redirect(url_for('transactions_page'))
+
+
 @app.route('/budget', methods=['GET', 'POST'])
 def budget():
     user = session.get('user')

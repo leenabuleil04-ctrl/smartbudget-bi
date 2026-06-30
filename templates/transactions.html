@@ -276,6 +276,43 @@
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
   }
 
+  /* ── Delete-all (wipe) danger zone ── */
+  .wipe-confirm-input {
+    padding: 8px 12px;
+    border: 1px solid #fca5a5;
+    border-radius: 10px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    outline: none;
+    width: 160px;
+    transition: border-color 0.15s;
+  }
+  .wipe-confirm-input:focus { border-color: #dc2626; }
+  .btn-wipe {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, opacity 0.15s;
+  }
+  .btn-wipe:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+  .btn-wipe:not(:disabled):hover { filter: brightness(1.1); }
+  .btn-wipe .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+
   /* header row */
   .tx-list-head {
     display: grid;
@@ -681,6 +718,27 @@
   </div>
 </div>
 
+<!-- ── Delete ALL transactions danger zone ── -->
+<div class="danger-zone-card" style="margin-top:10px;border-color:#fca5a5;">
+  <button class="danger-zone-toggle" type="button" id="wipeToggle" style="color:#dc2626;">
+    <span class="material-symbols-outlined">warning</span>
+    Delete ALL my transactions…
+  </button>
+  <div id="wipePanel" class="danger-panel" style="display:none;background:#fff1f2;">
+    <p><strong>This permanently deletes every transaction in your account across all months.</strong> This cannot be undone.</p>
+    <p>Type <code>DELETE</code> below to confirm.</p>
+    <form method="POST" action="{{ url_for('delete_all_transactions') }}" class="danger-form">
+      <input type="text" name="confirm" id="wipeConfirm" placeholder="Type DELETE"
+             autocomplete="off" class="wipe-confirm-input"
+             oninput="document.getElementById('wipeBtn').disabled = this.value !== 'DELETE';">
+      <button type="submit" class="btn-wipe" id="wipeBtn" disabled>
+        <span class="material-symbols-outlined">delete_forever</span>
+        Delete ALL
+      </button>
+    </form>
+  </div>
+</div>
+
 <!-- ── Sticky summary bar ── -->
 <div class="tx-summary-bar">
   <span class="sum-label">
@@ -694,6 +752,10 @@
 <script>
   document.getElementById('dangerToggle').addEventListener('click', function () {
     var panel = document.getElementById('dangerPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('wipeToggle').addEventListener('click', function () {
+    var panel = document.getElementById('wipePanel');
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
   });
 </script>

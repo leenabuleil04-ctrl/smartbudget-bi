@@ -174,11 +174,113 @@
     margin-bottom: 24px;
   }
 
+  /* ── Per-row delete button ── */
+  .btn-tx-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--outline);
+    padding: 5px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+    opacity: 0;
+    flex-shrink: 0;
+  }
+  .tx-row:hover .btn-tx-delete { opacity: 1; }
+  .btn-tx-delete:hover { color: var(--error); background: #fff1f2; }
+  .btn-tx-delete .material-symbols-outlined {
+    font-size: 16px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+
+  /* ── Delete-month danger zone ── */
+  .danger-zone-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .danger-zone-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px 20px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s, background 0.15s;
+  }
+  .danger-zone-toggle:hover { color: var(--error); background: #fff1f2; }
+  .danger-zone-toggle .material-symbols-outlined {
+    font-size: 16px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+  .danger-panel {
+    padding: 16px 20px;
+    border-top: 1px solid var(--outline-variant);
+    background: #fff8f8;
+  }
+  .danger-panel p {
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .danger-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .danger-form input[type="month"] {
+    padding: 8px 12px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 10px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .danger-form input[type="month"]:focus { border-color: var(--error); }
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .btn-danger:hover { filter: brightness(1.1); }
+  .btn-danger .material-symbols-outlined {
+    font-size: 15px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+
   /* header row */
   .tx-list-head {
     display: grid;
-    grid-template-columns: 120px 1fr 160px 140px;
-    gap: 24px;
+    grid-template-columns: 120px 1fr 160px 120px 36px;
+    gap: 16px;
     padding: 12px 24px;
     background: var(--surface-container-low);
     border-bottom: 1px solid var(--outline-variant);
@@ -194,8 +296,8 @@
   /* transaction row */
   .tx-row {
     display: grid;
-    grid-template-columns: 120px 1fr 160px 140px;
-    gap: 24px;
+    grid-template-columns: 120px 1fr 160px 120px 36px;
+    gap: 16px;
     padding: 14px 24px;
     align-items: center;
     border-bottom: 1px solid rgba(189,201,198,0.25);
@@ -386,6 +488,7 @@
     <div>Description</div>
     <div class="col-cat">Category</div>
     <div class="col-amt">Amount (₪)</div>
+    <div></div>
   </div>
 
   {% if transactions %}
@@ -399,6 +502,11 @@
       <div class="tx-amount {{ 'amount-neg' if (t.amount | float) < 0 else 'amount-pos' }}">
         {{ "%.2f" | format(t.amount | float) }}
       </div>
+      <form method="POST" action="{{ url_for('delete_transaction', tx_id=t.id) }}">
+        <button type="submit" class="btn-tx-delete" title="Delete transaction">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </form>
     </div>
     {% endfor %}
   {% else %}
@@ -411,6 +519,24 @@
 
 </div>
 
+<!-- ── Delete-month danger zone ── -->
+<div class="danger-zone-card">
+  <button class="danger-zone-toggle" type="button" id="dangerToggle">
+    <span class="material-symbols-outlined">delete_sweep</span>
+    Delete all transactions for a month…
+  </button>
+  <div id="dangerPanel" class="danger-panel" style="display:none">
+    <p>Select a month and click Delete. This permanently removes all transactions for that month and cannot be undone.</p>
+    <form method="POST" action="{{ url_for('delete_month_transactions') }}" class="danger-form">
+      <input type="month" name="month" value="{{ now_month }}" required>
+      <button type="submit" class="btn-danger">
+        <span class="material-symbols-outlined">delete_forever</span>
+        Delete all
+      </button>
+    </form>
+  </div>
+</div>
+
 <!-- ── Sticky summary bar ── -->
 <div class="tx-summary-bar">
   <span class="sum-label">
@@ -420,5 +546,12 @@
   <span class="sum-spent">Total spent: ₪{{ "%.2f" | format(ns.spent | abs) }}</span>
   {% endif %}
 </div>
+
+<script>
+  document.getElementById('dangerToggle').addEventListener('click', function () {
+    var panel = document.getElementById('dangerPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+</script>
 
 {% endblock %}

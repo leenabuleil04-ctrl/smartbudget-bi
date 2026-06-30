@@ -34,21 +34,37 @@
     letter-spacing: -0.02em;
     color: var(--on-surface);
   }
-  .dash-month-chip {
+  /* ── Month selector (Feature 3) ── */
+  .month-select-form {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 14px;
     background: var(--surface-container-low);
     border: 1px solid var(--outline-variant);
-    border-radius: 999px;
+    border-radius: 10px;
+    padding: 6px 10px 6px 10px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .month-select-form:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.08);
+  }
+  .month-sel-icon {
+    font-size: 16px;
+    color: var(--primary);
+    flex-shrink: 0;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+  .month-select {
+    border: none;
+    background: transparent;
+    font-family: inherit;
     font-size: 13px;
     font-weight: 600;
     color: var(--on-surface-variant);
-  }
-  .dash-month-chip .material-symbols-outlined {
-    font-size: 15px;
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 16;
+    outline: none;
+    cursor: pointer;
+    padding-right: 4px;
   }
 
   /* ── Forecast Banner ── */
@@ -412,10 +428,15 @@
 <!-- ── Page Header ── -->
 <div class="dash-title-row fi-1">
   <h2>Dashboard</h2>
-  <span class="dash-month-chip">
-    <span class="material-symbols-outlined">calendar_month</span>
-    Overview
-  </span>
+  <!-- Month selector: auto-submits on change (Feature 3) -->
+  <form method="GET" action="{{ url_for('dashboard') }}" class="month-select-form" id="monthForm">
+    <span class="material-symbols-outlined month-sel-icon">calendar_month</span>
+    <select name="month" id="monthSelect" class="month-select" onchange="document.getElementById('monthForm').submit()">
+      {% for m in available_months %}
+      <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </form>
 </div>
 
 <!-- ── Savings Forecast Banner ── -->

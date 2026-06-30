@@ -22,6 +22,57 @@
     max-width: 560px;
   }
 
+  /* ── Month picker row ── */
+  .month-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .month-pick-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .month-pick-label .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--primary);
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .month-pick-input {
+    padding: 8px 12px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--on-surface);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+  }
+  .month-pick-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.10);
+  }
+  .month-pick-hint {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    line-height: 1.4;
+  }
+
   /* ── Dashed upload zone ── */
   .upload-zone {
     position: relative;
@@ -284,6 +335,22 @@
     <p>Upload your bank or credit card statement in CSV format to analyze your spending.</p>
   </div>
 
+  <!-- ── Month picker ── -->
+  <div class="month-pick-row">
+    <label class="month-pick-label" for="importMonth">
+      <span class="material-symbols-outlined">calendar_month</span>
+      Tag transactions to month
+    </label>
+    <input
+      type="month"
+      id="importMonth"
+      name="month"
+      value="{{ default_month }}"
+      class="month-pick-input"
+    >
+    <span class="month-pick-hint">Dashboard will open on this month after import</span>
+  </div>
+
   <!-- ── Form — preserves method, enctype, and input name ── -->
   <form method="post" enctype="multipart/form-data" id="importForm">
 
@@ -296,12 +363,12 @@
         Drag and drop your CSV file or
         <span class="browse-link">Browse Files</span>
       </p>
-      <p class="upload-sub">Supported format: <strong>CSV</strong></p>
+      <p class="upload-sub">Supported formats: <strong>CSV</strong> or <strong>PDF</strong></p>
       <!-- Covers entire zone — click anywhere opens file dialog -->
       <input
         type="file"
         name="file"
-        accept=".csv"
+        accept=".csv,.pdf"
         id="fileInput"
         class="file-input-hidden"
       >
@@ -326,7 +393,7 @@
       <div class="proc-track"><div class="proc-fill"></div></div>
       <div class="proc-label">
         <div class="proc-dot"></div>
-        Processing your CSV file…
+        Processing your file…
       </div>
     </div>
 
@@ -390,9 +457,13 @@
     return (b / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  function fileType(name) {
+    return name.toLowerCase().endsWith('.pdf') ? 'PDF File' : 'CSV File';
+  }
+
   function setFile(file) {
     fileNameEl.textContent = file.name;
-    fileMetaEl.textContent = formatBytes(file.size) + ' • CSV File';
+    fileMetaEl.textContent = formatBytes(file.size) + ' • ' + fileType(file.name);
     fileInfoCard.classList.add('visible');
     dropzone.classList.add('has-file');
     submitBtn.disabled = false;
@@ -427,7 +498,8 @@
     e.preventDefault();
     dropzone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file && file.name.toLowerCase().endsWith('.csv')) {
+    const allowed = /\.(csv|pdf)$/i;
+    if (file && allowed.test(file.name)) {
       try {
         const dt = new DataTransfer();
         dt.items.add(file);

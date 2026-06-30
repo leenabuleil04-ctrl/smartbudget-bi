@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import config
 from supabase_auth.errors import AuthApiError
@@ -10,12 +11,40 @@ from services.analytics import compute_metrics, compute_monthly_trend, compute_s
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY or os.urandom(24)
 
-# Initialize Supabase client (raises if env not set)
 supabase = None
 try:
     supabase = get_supabase_client()
 except Exception:
     supabase = None
+
+# ── CBS benchmark seed data (Feature 2) ──
+CBS_BENCHMARK_DATA = [
+    {'category': 'Food',          'monthly_avg': 820},
+    {'category': 'Rent',          'monthly_avg': 2200},
+    {'category': 'Transport',     'monthly_avg': 350},
+    {'category': 'Entertainment', 'monthly_avg': 280},
+    {'category': 'Education',     'monthly_avg': 450},
+    {'category': 'Health',        'monthly_avg': 180},
+    {'category': 'Shopping',      'monthly_avg': 420},
+    {'category': 'Other',         'monthly_avg': 200},
+]
+
+
+def seed_cbs_benchmarks():
+    if supabase is None:
+        return
+    try:
+        res = supabase.table('cbs_benchmarks').select('category').execute()
+        if res.data:
+            return  # already seeded
+        supabase.table('cbs_benchmarks').upsert(
+            CBS_BENCHMARK_DATA, on_conflict='category'
+        ).execute()
+    except Exception:
+        pass
+
+
+seed_cbs_benchmarks()
 
 
 @app.route('/')
@@ -30,29 +59,46 @@ def dashboard():
         flash('Please log in to view the dashboard', 'error')
         return redirect(url_for('login'))
 
-    # fetch transactions for the user
-    transactions = []
+    # Feature 3: month filter from query param, default to current month
+    selected_month = request.args.get('month', '').strip()
+    if not selected_month:
+        selected_month = date.today().strftime('%Y-%m')
+
+    # Fetch all transactions to build available-months list
+    all_transactions = []
     try:
         res = supabase.table('transactions').select('*').eq('student_id', user['id']).execute()
-        err = getattr(res, 'error', None)
-        if not err:
-            transactions = res.data or []
+        if not getattr(res, 'error', None):
+            all_transactions = res.data or []
     except Exception:
-        transactions = []
+        all_transactions = []
+
+    # Available months for the selector dropdown (falls back to date[:7] if month column absent)
+    available_months = sorted(set(
+        t.get('month') or t.get('date', '')[:7]
+        for t in all_transactions
+        if t.get('date')
+    ), reverse=True)
+    if not available_months:
+        available_months = [selected_month]
+    if selected_month not in available_months:
+        available_months.insert(0, selected_month)
+
+    # Filter to selected month
+    transactions = [
+        t for t in all_transactions
+        if (t.get('month') or t.get('date', '')[:7]) == selected_month
+    ]
 
     metrics = compute_metrics(transactions)
 
-    # category chart data in fixed order
     cat_labels = CATEGORY_ORDER
     cat_values = [metrics['by_category'].get(c, 0) for c in cat_labels]
 
-    # monthly trend (last 6 months)
-    trend_labels, trend_values = compute_monthly_trend(transactions)
+    # Monthly trend uses all transactions (not month-filtered) for 6-month view
+    trend_labels, trend_values = compute_monthly_trend(all_transactions)
+    alerts = compute_spending_alerts(all_transactions)
 
-    # spending alerts vs last month
-    alerts = compute_spending_alerts(transactions)
-
-    # CBS benchmark data — keep raw list for insights, build dict for chart
     cbs_benchmarks_raw = []
     cbs_by_category = {}
     try:
@@ -65,11 +111,11 @@ def dashboard():
         pass
     cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]
 
-    # per-category budget breakdown — keep raw list for insights
     budget_goals_raw = []
     budget_breakdown = {}
     try:
-        res = supabase.table('budget_goals').select('category,monthly_limit_ils').eq('student_id', user['id']).execute()
+        res = supabase.table('budget_goals').select('category,monthly_limit_ils') \
+            .eq('student_id', user['id']).execute()
         if not getattr(res, 'error', None) and res.data:
             budget_goals_raw = res.data
             for row in res.data:
@@ -96,6 +142,8 @@ def dashboard():
         alerts=alerts,
         transactions=transactions,
         insights=insights,
+        selected_month=selected_month,
+        available_months=available_months,
     )
 
 
@@ -112,40 +160,83 @@ def import_page():
             flash('No file uploaded', 'error')
             return redirect(url_for('import_page'))
 
+        # Feature 3: month selected on the import form
+        selected_month = request.form.get('month', date.today().strftime('%Y-%m')).strip()
+
         try:
-            transactions = parse_csv(file)
+            # Feature 4: detect PDF vs CSV by file extension
+            filename = (file.filename or '').lower()
+            if filename.endswith('.pdf'):
+                from services.pdf_parser import parse_pdf
+                transactions = parse_pdf(file)
+            else:
+                transactions = parse_csv(file)
             transactions = categorize_transactions(transactions)
 
-            # attach student_id and ensure fields
+            # Feature 1: build dedup set from all existing transactions for this student
+            existing = set()
+            try:
+                res = supabase.table('transactions').select('date,description,amount') \
+                    .eq('student_id', user['id']).execute()
+                for row in (res.data or []):
+                    existing.add((
+                        row.get('date', ''),
+                        row.get('description', ''),
+                        float(row.get('amount', 0)),
+                    ))
+            except Exception:
+                pass
+
             records = []
+            skipped = 0
             for t in transactions:
+                amt = round(float(t.get('amount', 0)), 2)
+                desc = t.get('description', '')
+                dt = t['date']
+                if (dt, desc, amt) in existing:
+                    skipped += 1
+                    continue
                 records.append({
                     'student_id': user['id'],
-                    'date': t['date'],
-                    'description': t.get('description',''),
-                    'amount': round(float(t.get('amount',0)),2),
-                    'category': t.get('category','Other'),
+                    'date': dt,
+                    'description': desc,
+                    'amount': amt,
+                    'category': t.get('category', 'Other'),
+                    'month': dt[:7],  # Feature 3: tag from transaction date
                 })
 
-            # insert into Supabase in a try/except
-            try:
-                res = supabase.table('transactions').insert(records).execute()
-                err = getattr(res, 'error', None)
-                if err:
-                    message = getattr(err, 'message', str(err))
-                    flash(f'Error saving transactions: {message}', 'error')
+            if records:
+                try:
+                    res = supabase.table('transactions').insert(records).execute()
+                    err = getattr(res, 'error', None)
+                    if err:
+                        flash(f'Error saving transactions: {getattr(err, "message", str(err))}', 'error')
+                        return redirect(url_for('import_page'))
+                    msg = f'Imported {len(records)} transaction{"s" if len(records) != 1 else ""}'
+                    if skipped:
+                        msg += f' · {skipped} duplicate{"s" if skipped != 1 else ""} skipped'
+                    flash(msg, 'success')
+                except Exception as e:
+                    flash(f'Unexpected DB error: {e}', 'error')
                     return redirect(url_for('import_page'))
-                flash(f'Imported {len(records)} transactions', 'success')
-                return redirect(url_for('dashboard'))
-            except Exception as e:
-                flash(f'Unexpected DB error: {e}', 'error')
+            else:
+                if skipped:
+                    flash(
+                        f'All {skipped} transaction{"s" if skipped != 1 else ""} already imported — '
+                        'no duplicates added', 'info'
+                    )
+                else:
+                    flash('No transactions found in file', 'info')
                 return redirect(url_for('import_page'))
 
         except Exception as e:
-            flash(f'Failed to parse CSV: {e}', 'error')
+            flash(f'Failed to parse file: {e}', 'error')
             return redirect(url_for('import_page'))
 
-    return render_template('import.html')
+        return redirect(url_for('dashboard', month=selected_month))
+
+    default_month = date.today().strftime('%Y-%m')
+    return render_template('import.html', default_month=default_month)
 
 
 @app.route('/transactions')
@@ -177,6 +268,8 @@ def transactions_page():
     except Exception:
         transactions = []
 
+    now_month = date.today().strftime('%Y-%m')
+
     return render_template(
         'transactions.html',
         transactions=transactions,
@@ -185,7 +278,48 @@ def transactions_page():
         f_date_from=f_date_from,
         f_date_to=f_date_to,
         f_search=f_search,
+        now_month=now_month,
     )
+
+
+# Feature 5: delete a single transaction
+@app.route('/transactions/<tx_id>/delete', methods=['POST'])
+def delete_transaction(tx_id):
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    try:
+        supabase.table('transactions') \
+            .delete() \
+            .eq('id', tx_id) \
+            .eq('student_id', user['id']) \
+            .execute()
+        flash('Transaction deleted', 'info')
+    except Exception as e:
+        flash(f'Error deleting transaction: {e}', 'error')
+    return redirect(url_for('transactions_page'))
+
+
+# Feature 5: delete all transactions for a given month
+@app.route('/transactions/delete-month', methods=['POST'])
+def delete_month_transactions():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    month = request.form.get('month', '').strip()
+    if not month:
+        flash('No month specified', 'error')
+        return redirect(url_for('transactions_page'))
+    try:
+        supabase.table('transactions') \
+            .delete() \
+            .eq('student_id', user['id']) \
+            .like('date', f'{month}%') \
+            .execute()
+        flash(f'All transactions for {month} have been deleted', 'info')
+    except Exception as e:
+        flash(f'Error deleting transactions: {e}', 'error')
+    return redirect(url_for('transactions_page'))
 
 
 @app.route('/budget', methods=['GET', 'POST'])
@@ -205,7 +339,11 @@ def budget():
                     try:
                         amount = round(float(raw), 2)
                         if amount > 0:
-                            records.append({'student_id': user['id'], 'category': cat, 'monthly_limit_ils': amount})
+                            records.append({
+                                'student_id': user['id'],
+                                'category': cat,
+                                'monthly_limit_ils': amount,
+                            })
                     except ValueError:
                         pass
             if records:
@@ -288,7 +426,6 @@ def login():
             meta = getattr(auth_res.user, 'user_metadata', None) or {}
             display_name = meta.get('name') if isinstance(meta, dict) else None
 
-            # 1) look up by auth_id (normal register flow)
             student = None
             try:
                 res = supabase.table('students').select('*').eq('auth_id', auth_uuid).maybe_single().execute()
@@ -297,7 +434,6 @@ def login():
             except Exception:
                 pass
 
-            # 2) fall back to id == auth_uuid (manual-upsert accounts)
             if not student:
                 try:
                     res = supabase.table('students').select('*').eq('id', auth_uuid).maybe_single().execute()
@@ -306,11 +442,11 @@ def login():
                 except Exception:
                     pass
 
-            # 3) auto-create with both id and auth_id set to the auth UUID
             if not student:
                 try:
                     res = supabase.table('students').upsert(
-                        {'id': auth_uuid, 'auth_id': auth_uuid, 'email': user_email, 'name': display_name or user_email},
+                        {'id': auth_uuid, 'auth_id': auth_uuid, 'email': user_email,
+                         'name': display_name or user_email},
                         on_conflict='id',
                     ).execute()
                     student = (res.data or [{}])[0]

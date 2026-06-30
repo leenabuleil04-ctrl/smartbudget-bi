@@ -1,7 +1,15 @@
+import io
 import os
 import calendar
 from datetime import date
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from html import escape as _xe
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 import config
 from supabase_auth.errors import AuthApiError
 from models.supabase_client import get_supabase_client
@@ -156,6 +164,223 @@ def dashboard():
         insights=insights,
         selected_month=selected_month,
         available_months=available_months,
+    )
+
+
+@app.route('/export')
+def export_pdf():
+    user = session.get('user')
+    if not user:
+        flash('Please log in', 'error')
+        return redirect(url_for('login'))
+
+    selected_month = request.args.get('month', date.today().strftime('%Y-%m')).strip()
+
+    # ── Fetch data (same logic as dashboard route) ─────────────────────
+    transactions = []
+    try:
+        res = supabase.table('transactions').select('*').eq('student_id', user['id']).execute()
+        if not getattr(res, 'error', None):
+            transactions = [
+                t for t in (res.data or [])
+                if (t.get('month') or t.get('date', '')[:7]) == selected_month
+            ]
+    except Exception:
+        pass
+
+    metrics = compute_metrics(transactions)
+
+    cbs_benchmarks_raw, cbs_by_category = [], {}
+    try:
+        res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
+        if not getattr(res, 'error', None) and res.data:
+            cbs_benchmarks_raw = res.data
+            _s, _c = {}, {}
+            for row in cbs_benchmarks_raw:
+                cat = row['category']
+                val = float(row.get('monthly_avg', 0) or 0)
+                if val > 0:
+                    _s[cat] = _s.get(cat, 0.0) + val
+                    _c[cat] = _c.get(cat, 0) + 1
+            cbs_by_category = {cat: _s[cat] / _c[cat] for cat in _s}
+    except Exception:
+        pass
+
+    budget_goals_raw = []
+    try:
+        res = (supabase.table('budget_goals')
+               .select('category,monthly_limit_ils')
+               .eq('student_id', user['id']).execute())
+        if not getattr(res, 'error', None) and res.data:
+            budget_goals_raw = res.data
+    except Exception:
+        pass
+
+    insights = generate_insights(metrics['by_category'], cbs_benchmarks_raw, budget_goals_raw)
+
+    # ── Build PDF ───────────────────────────────────────────────────────
+    buf = io.BytesIO()
+    W   = A4[0] - 4 * cm   # usable content width
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            topMargin=1.5*cm, bottomMargin=2*cm,
+                            leftMargin=2*cm,  rightMargin=2*cm)
+
+    TEAL   = colors.HexColor('#005c55')
+    TEAL_L = colors.HexColor('#e8f5f4')
+    GREY   = colors.HexColor('#6e7977')
+    RED    = colors.HexColor('#b00020')
+    GREEN  = colors.HexColor('#166534')
+    BORDER = colors.HexColor('#bdd8d5')
+    ss     = getSampleStyleSheet()
+
+    def ps(name, **kw):
+        return ParagraphStyle(name, parent=ss['Normal'], **kw)
+
+    story = []
+
+    # 1. Header banner ──────────────────────────────────────────────────
+    user_name = _xe(user.get('name') or user.get('email', ''))
+    banner = Table(
+        [[
+            Paragraph('SmartBudget BI<br/>'
+                      '<font size="10">Monthly Financial Report</font>',
+                      ps('bh', fontSize=18, fontName='Helvetica-Bold',
+                         textColor=colors.white, leading=26)),
+            Paragraph(f'<b>{user_name}</b><br/>'
+                      f'<font size="10">{selected_month}</font>',
+                      ps('br', fontSize=13, fontName='Helvetica',
+                         textColor=colors.white, leading=20, alignment=TA_RIGHT)),
+        ]],
+        colWidths=[W * 0.65, W * 0.35],
+    )
+    banner.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), TEAL),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 20),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 20),
+        ('TOPPADDING',    (0, 0), (-1, -1), 22),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 22),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(banner)
+    story.append(Spacer(1, 0.6 * cm))
+
+    # 2. KPI row ────────────────────────────────────────────────────────
+    bal_color = GREEN if metrics['balance'] >= 0 else RED
+    kpi = Table(
+        [[
+            Paragraph(f'<b>ILS {metrics["total_income"]:,.2f}</b>',
+                      ps('ki',  fontSize=16, fontName='Helvetica-Bold', textColor=GREEN,  alignment=TA_CENTER)),
+            Paragraph(f'<b>ILS {metrics["total_expenses"]:,.2f}</b>',
+                      ps('ke',  fontSize=16, fontName='Helvetica-Bold', textColor=RED,    alignment=TA_CENTER)),
+            Paragraph(f'<b>ILS {metrics["balance"]:,.2f}</b>',
+                      ps('kb',  fontSize=16, fontName='Helvetica-Bold', textColor=bal_color, alignment=TA_CENTER)),
+        ], [
+            Paragraph('Total Income',   ps('kli', fontSize=9, fontName='Helvetica', textColor=GREY, alignment=TA_CENTER)),
+            Paragraph('Total Expenses', ps('kle', fontSize=9, fontName='Helvetica', textColor=GREY, alignment=TA_CENTER)),
+            Paragraph('Net Balance',    ps('klb', fontSize=9, fontName='Helvetica', textColor=GREY, alignment=TA_CENTER)),
+        ]],
+        colWidths=[W / 3, W / 3, W / 3],
+    )
+    kpi.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), TEAL_L),
+        ('TOPPADDING',    (0, 0), (-1, -1), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+        ('LINEAFTER',     (0, 0), (1, -1),  1, BORDER),
+    ]))
+    story.append(kpi)
+    story.append(Spacer(1, 0.6 * cm))
+
+    # 3. Category spending table ────────────────────────────────────────
+    story.append(HRFlowable(width='100%', thickness=1, color=BORDER, spaceAfter=4))
+    story.append(Paragraph('SPENDING BY CATEGORY',
+                            ps('sh', fontSize=9, fontName='Helvetica-Bold',
+                               textColor=TEAL, spaceBefore=2, spaceAfter=6)))
+
+    total_exp = metrics['total_expenses']
+    cat_rows = []
+    for cat in CATEGORY_ORDER:
+        spent = metrics['by_category'].get(cat, 0.0)
+        if spent <= 0:
+            continue
+        pct   = f'{spent / total_exp * 100:.1f}%' if total_exp > 0 else '-'
+        cbs_v = cbs_by_category.get(cat, 0.0)
+        cat_rows.append([cat, f'ILS {spent:,.2f}', pct, f'ILS {cbs_v:,.0f}' if cbs_v > 0 else '-'])
+
+    if not cat_rows:
+        cat_rows = [['No expenses recorded this month', '', '', '']]
+
+    TH = ps('th', fontSize=9, fontName='Helvetica-Bold', textColor=colors.white)
+    TD = ps('td', fontSize=9, fontName='Helvetica',      textColor=colors.HexColor('#1a1e1d'))
+    ct = Table(
+        [[Paragraph(h, TH) for h in ['Category', 'Amount (ILS)', '% of Total', 'CBS Avg (ILS)']],
+         *[[Paragraph(r[0], TD), r[1], r[2], r[3]] for r in cat_rows]],
+        colWidths=[W * 0.35, W * 0.25, W * 0.20, W * 0.20],
+    )
+    ct.setStyle(TableStyle([
+        ('BACKGROUND',     (0, 0), (-1, 0),  TEAL),
+        ('TOPPADDING',     (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING',  (0, 0), (-1, -1), 7),
+        ('LEFTPADDING',    (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',   (0, 0), (-1, -1), 10),
+        ('FONTNAME',       (1, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE',       (1, 1), (-1, -1), 9),
+        ('ALIGN',          (1, 0), (-1, -1), 'RIGHT'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, TEAL_L]),
+        ('LINEBELOW',      (0, 0), (-1, -1), 0.5, BORDER),
+    ]))
+    story.append(ct)
+    story.append(Spacer(1, 0.6 * cm))
+
+    # 4. Top 3 insights ─────────────────────────────────────────────────
+    top_ins = insights[:3]
+    if top_ins:
+        story.append(HRFlowable(width='100%', thickness=1, color=BORDER, spaceAfter=4))
+        story.append(Paragraph('TOP INSIGHTS',
+                                ps('ih', fontSize=9, fontName='Helvetica-Bold',
+                                   textColor=TEAL, spaceBefore=2, spaceAfter=6)))
+        TYPE_ACCENT = {
+            'danger':  (colors.HexColor('#fff1f2'), colors.HexColor('#ef4444')),
+            'warning': (colors.HexColor('#fffbeb'), colors.HexColor('#f59e0b')),
+            'good':    (colors.HexColor('#f0fdf4'), colors.HexColor('#22c55e')),
+            'info':    (colors.HexColor('#eff6ff'), colors.HexColor('#3b82f6')),
+        }
+        for idx, ins in enumerate(top_ins):
+            bg, accent = TYPE_ACCENT.get(ins['type'], (TEAL_L, TEAL))
+            it = Table(
+                [[Paragraph(_xe(ins['text']),
+                            ps(f'it{idx}', fontSize=9, fontName='Helvetica',
+                               textColor=colors.HexColor('#1a1e1d'), leading=15))]],
+                colWidths=[W],
+            )
+            it.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0), (-1, -1), bg),
+                ('LEFTPADDING',   (0, 0), (-1, -1), 14),
+                ('RIGHTPADDING',  (0, 0), (-1, -1), 14),
+                ('TOPPADDING',    (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('LINEBEFORE',    (0, 0), (0,  -1), 4, accent),
+            ]))
+            story.append(it)
+            story.append(Spacer(1, 0.2 * cm))
+
+    # 5. Footer ─────────────────────────────────────────────────────────
+    story.append(Spacer(1, 0.4 * cm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=GREY))
+    story.append(Spacer(1, 0.15 * cm))
+    story.append(Paragraph(
+        f'Generated {date.today().strftime("%B %d, %Y")}  |  SmartBudget BI',
+        ps('ft', fontSize=8, fontName='Helvetica', textColor=GREY, alignment=TA_CENTER),
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=f'smartbudget_{selected_month}.pdf',
+        mimetype='application/pdf',
     )
 
 

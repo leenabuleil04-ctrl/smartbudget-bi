@@ -464,7 +464,7 @@ def import_page():
                     )
                 else:
                     flash('No transactions found in file', 'info')
-                return redirect(url_for('import_page'))
+                return redirect(url_for('dashboard', month=selected_month))
 
         except Exception as e:
             flash(f'Failed to parse file: {e}', 'error')

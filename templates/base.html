@@ -15,15 +15,15 @@
       <h1 class="brand">SmartBudget BI</h1>
       <nav class="nav">
         <a href="{{ url_for('index') }}">Home</a>
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('import_page') }}">Import</a>
         {% if session.get('user') %}
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('import_page') }}">Import</a>
           <a href="{{ url_for('transactions_page') }}">Transactions</a>
           <a href="{{ url_for('budget') }}">Budget</a>
           <a href="{{ url_for('logout') }}">Logout</a>
         {% else %}
-          <a href="{{ url_for('login') }}">Login</a>
-          <a href="{{ url_for('register') }}">Register</a>
+          <a href="{{ url_for('login') }}">Log In</a>
+          <a href="{{ url_for('register') }}">Get Started</a>
         {% endif %}
       </nav>
     </div>

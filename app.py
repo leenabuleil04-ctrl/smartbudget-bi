@@ -14,7 +14,7 @@ import config
 from supabase_auth.errors import AuthApiError
 from models.supabase_client import get_supabase_client
 from services.csv_parser import parse_csv
-from services.categorizer import categorize_transactions, ALLOWED_CATEGORIES
+from services.categorizer import categorize_transactions, categorize_description, ALLOWED_CATEGORIES
 from services.analytics import compute_metrics, compute_monthly_trend, compute_spending_alerts, generate_insights, CATEGORY_ORDER
 
 app = Flask(__name__)
@@ -382,6 +382,48 @@ def export_pdf():
         download_name=f'smartbudget_{selected_month}.pdf',
         mimetype='application/pdf',
     )
+
+
+@app.route('/recategorize', methods=['POST'])
+def recategorize():
+    """Re-run keyword categorization on every transaction for the logged-in user.
+
+    Useful after the keyword list is updated to fix previously imported
+    transactions that were miscategorized.  Only updates rows where the
+    category actually changes so the DB write count stays low.
+    """
+    user = session.get('user')
+    if not user:
+        flash('Please log in', 'error')
+        return redirect(url_for('login'))
+
+    try:
+        res = supabase.table('transactions').select('id,description,category') \
+            .eq('student_id', user['id']).execute()
+        rows = res.data or []
+    except Exception as e:
+        flash(f'Could not fetch transactions: {e}', 'error')
+        return redirect(url_for('transactions_page'))
+
+    updated = 0
+    errors  = 0
+    for row in rows:
+        new_cat = categorize_description(row.get('description', ''))
+        if new_cat == row.get('category'):
+            continue
+        try:
+            supabase.table('transactions') \
+                .update({'category': new_cat}) \
+                .eq('id', row['id']).execute()
+            updated += 1
+        except Exception:
+            errors += 1
+
+    if errors:
+        flash(f'Re-categorized {updated} transaction(s) — {errors} error(s).', 'warning')
+    else:
+        flash(f'Re-categorized {updated} transaction(s) successfully.', 'success')
+    return redirect(url_for('transactions_page'))
 
 
 @app.route('/import', methods=['GET', 'POST'])

@@ -9,7 +9,7 @@ ALLOWED_CATEGORIES = [
 # (pdfplumber on some Hebrew PDFs returns characters within each word in
 # visual/reversed order, e.g. 'טקריד רבטצמל' = reversed 'דירקט למצטבר').
 CATEGORY_KEYWORDS = {
-    # ── Food ─────────────────────────────────────────────────────────────
+    # ── Food — Hebrew ─────────────────────────────────────────────────────
     'שופרסל': 'Food',
     'רמי לוי': 'Food',
     'יוחננוף': 'Food',
@@ -45,8 +45,24 @@ CATEGORY_KEYWORDS = {
     'מאפה': 'Food',
     'עוגה': 'Food',
     'גלידה': 'Food',
+    # ── Food — English ────────────────────────────────────────────────────
+    'shufersal': 'Food',
+    'rami levy': 'Food',
+    'victory supermarket': 'Food',
+    'victory market': 'Food',
+    'victory': 'Food',
+    'aroma': 'Food',
+    "mcdonald's": 'Food',
+    'mcdonalds': 'Food',
+    'burger king': 'Food',
+    'pizza hut': 'Food',
+    'dominos': 'Food',
+    'domino\'s': 'Food',
+    'coffix': 'Food',
+    'yohananof': 'Food',
+    'tiv taam': 'Food',
 
-    # ── Rent ─────────────────────────────────────────────────────────────
+    # ── Rent — Hebrew ─────────────────────────────────────────────────────
     'שכר דירה': 'Rent',
     'שכירות': 'Rent',
     'דמי שכירות': 'Rent',
@@ -55,8 +71,12 @@ CATEGORY_KEYWORDS = {
     'משכנתא': 'Rent',
     'ארנונה': 'Rent',
     'שכד': 'Rent',
+    # ── Rent — English ────────────────────────────────────────────────────
+    'rent payment': 'Rent',
+    'monthly rent': 'Rent',
+    'rent': 'Rent',
 
-    # ── Transport ────────────────────────────────────────────────────────
+    # ── Transport — Hebrew ────────────────────────────────────────────────
     'רכבת ישראל': 'Transport',
     'רכבת': 'Transport',
     'רב קו': 'Transport',
@@ -85,9 +105,18 @@ CATEGORY_KEYWORDS = {
     'אל על': 'Transport',
     'ויזאייר': 'Transport',
     'ריינאייר': 'Transport',
-    'wolt': 'Transport',     # Wolt is also a delivery service — listed under Transport, not Food
+    'wolt': 'Transport',
+    # ── Transport — English ───────────────────────────────────────────────
+    'israel railways': 'Transport',
+    'rav kav': 'Transport',
+    'ravkav': 'Transport',
+    'sonol': 'Transport',
+    'paz': 'Transport',
+    'gett': 'Transport',
+    'dor alon': 'Transport',
+    'egged': 'Transport',
 
-    # ── Entertainment ────────────────────────────────────────────────────
+    # ── Entertainment — Hebrew ────────────────────────────────────────────
     'קולנוע': 'Entertainment',
     'סינמה': 'Entertainment',
     'יס': 'Entertainment',
@@ -111,8 +140,13 @@ CATEGORY_KEYWORDS = {
     'gaming': 'Entertainment',
     'playstation': 'Entertainment',
     'xbox': 'Entertainment',
+    # ── Entertainment — English ───────────────────────────────────────────
+    'yes tv': 'Entertainment',
+    'yes-tv': 'Entertainment',
+    'hot tv': 'Entertainment',
+    'hot mobile': 'Entertainment',
 
-    # ── Education ────────────────────────────────────────────────────────
+    # ── Education — Hebrew ────────────────────────────────────────────────
     'אוניברסיטה': 'Education',
     'האוניברסיטה': 'Education',
     'טכניון': 'Education',
@@ -126,8 +160,20 @@ CATEGORY_KEYWORDS = {
     'udemy': 'Education',
     'coursera': 'Education',
     'ספרי לימוד': 'Education',
+    # ── Education — English ───────────────────────────────────────────────
+    'hebrew university': 'Education',
+    'tel aviv university': 'Education',
+    'bar ilan university': 'Education',
+    'bar-ilan': 'Education',
+    'ben gurion university': 'Education',
+    'haifa university': 'Education',
+    'technion': 'Education',
+    'open university': 'Education',
+    'tuition': 'Education',
+    'university': 'Education',
+    'college': 'Education',
 
-    # ── Health ───────────────────────────────────────────────────────────
+    # ── Health — Hebrew ───────────────────────────────────────────────────
     'סופר פארם': 'Health',
     'super-pharm': 'Health',
     'super pharm': 'Health',
@@ -146,8 +192,18 @@ CATEGORY_KEYWORDS = {
     'שיניים': 'Health',
     'פיזיותרפיה': 'Health',
     'בריאות': 'Health',
+    # ── Health — English ──────────────────────────────────────────────────
+    'maccabi': 'Health',
+    'clalit': 'Health',
+    'meuhedet': 'Health',
+    'leumit': 'Health',
+    'pharm': 'Health',
+    'pharmacy': 'Health',
+    'dental': 'Health',
+    'clinic': 'Health',
+    'optika': 'Health',
 
-    # ── Shopping ─────────────────────────────────────────────────────────
+    # ── Shopping — Hebrew ─────────────────────────────────────────────────
     'amazon': 'Shopping',
     'אמזון': 'Shopping',
     'aliexpress': 'Shopping',
@@ -171,6 +227,18 @@ CATEGORY_KEYWORDS = {
     'טלפון': 'Shopping',
     'קניות': 'Shopping',
     'חנות': 'Shopping',
+    # ── Shopping — English ────────────────────────────────────────────────
+    'zara': 'Shopping',
+    'castro': 'Shopping',
+    'renuar': 'Shopping',
+    'fox': 'Shopping',
+    'adidas': 'Shopping',
+    'nike': 'Shopping',
+    'puma': 'Shopping',
+    'terminalx': 'Shopping',
+    'terminal x': 'Shopping',
+    'ace hardware': 'Shopping',
+    'home center': 'Shopping',
 }
 
 # Keyword list also checked in reverse-character order for RTL PDF encoding issues

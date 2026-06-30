@@ -34,6 +34,42 @@
     letter-spacing: -0.02em;
     color: var(--on-surface);
   }
+  /* ── Export PDF button ── */
+  .dash-title-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-export-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: none;
+    border: 1px solid var(--outline-variant);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    white-space: nowrap;
+    height: 36px;
+  }
+  .btn-export-pdf:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(0,92,85,0.05);
+    text-decoration: none;
+  }
+  .btn-export-pdf .material-symbols-outlined {
+    font-size: 16px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+  }
+
   /* ── Month selector (Feature 3) ── */
   .month-select-form {
     display: inline-flex;
@@ -428,15 +464,23 @@
 <!-- ── Page Header ── -->
 <div class="dash-title-row fi-1">
   <h2>Dashboard</h2>
-  <!-- Month selector: auto-submits on change (Feature 3) -->
-  <form method="GET" action="{{ url_for('dashboard') }}" class="month-select-form" id="monthForm">
-    <span class="material-symbols-outlined month-sel-icon">calendar_month</span>
-    <select name="month" id="monthSelect" class="month-select" onchange="document.getElementById('monthForm').submit()">
-      {% for m in available_months %}
-      <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
-      {% endfor %}
-    </select>
-  </form>
+  <div class="dash-title-actions">
+    <!-- Month selector: auto-submits on change (Feature 3) -->
+    <form method="GET" action="{{ url_for('dashboard') }}" class="month-select-form" id="monthForm">
+      <span class="material-symbols-outlined month-sel-icon">calendar_month</span>
+      <select name="month" id="monthSelect" class="month-select" onchange="document.getElementById('monthForm').submit()">
+        {% for m in available_months %}
+        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('export_pdf', month=selected_month) }}"
+       class="btn-export-pdf"
+       title="Download PDF report for {{ selected_month }}">
+      <span class="material-symbols-outlined">picture_as_pdf</span>
+      Export PDF Report
+    </a>
+  </div>
 </div>
 
 <!-- ── Savings Forecast Banner ── -->

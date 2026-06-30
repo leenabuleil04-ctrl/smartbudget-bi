@@ -59,16 +59,38 @@ def parse_pdf(file_storage):
     transactions = []
 
     with pdfplumber.open(io.BytesIO(content)) as pdf:
+        print(f'[PDF DEBUG] opened PDF — {len(pdf.pages)} page(s)', flush=True)
+
         # Column-header anchors; refreshed on every page that contains headers.
         hova_cx = None   # centre-x of the חובה (debit) header
         zchut_cx = None  # centre-x of the זכות (credit) header
 
-        for page in pdf.pages:
+        for page_num, page in enumerate(pdf.pages, start=1):
+            # ── Raw text dump (visible in Railway logs) ──────────────────────
+            raw_text = page.extract_text() or ''
+            print(f'[PDF DEBUG] ── page {page_num} raw text ──', flush=True)
+            for line in raw_text.splitlines():
+                print(f'[PDF DEBUG]   {line!r}', flush=True)
+
             words = page.extract_words(x_tolerance=4, y_tolerance=4)
+            print(
+                f'[PDF DEBUG] page {page_num}: {len(words)} word tokens extracted',
+                flush=True,
+            )
             if not words:
+                print(f'[PDF DEBUG] page {page_num}: no words — skipping', flush=True)
                 continue
 
+            # ── Print all tokens with their x-positions ───────────────────
+            print(f'[PDF DEBUG] page {page_num} word list (text | x0 | top):', flush=True)
+            for w in words:
+                print(
+                    f'[PDF DEBUG]   {w["text"]!r:30s}  x0={w["x0"]:6.1f}  top={w["top"]:6.1f}',
+                    flush=True,
+                )
+
             # Detect column header positions on this page
+            prev_hova_cx, prev_zchut_cx = hova_cx, zchut_cx
             for w in words:
                 t = w['text']
                 if 'חובה' in t:
@@ -76,26 +98,58 @@ def parse_pdf(file_storage):
                 elif 'זכות' in t:
                     zchut_cx = (w['x0'] + w['x1']) / 2
 
+            if hova_cx != prev_hova_cx or zchut_cx != prev_zchut_cx:
+                print(
+                    f'[PDF DEBUG] page {page_num}: column anchors updated — '
+                    f'חובה cx={hova_cx}  זכות cx={zchut_cx}',
+                    flush=True,
+                )
+            else:
+                print(
+                    f'[PDF DEBUG] page {page_num}: column anchors unchanged — '
+                    f'חובה cx={hova_cx}  זכות cx={zchut_cx}',
+                    flush=True,
+                )
+
             # Bucket words into text rows by y-position (2 px tolerance)
             lines: dict = {}
             for w in words:
                 key = round(w['top'] / 2) * 2
                 lines.setdefault(key, []).append(w)
 
+            print(
+                f'[PDF DEBUG] page {page_num}: {len(lines)} distinct row(s) after bucketing',
+                flush=True,
+            )
+
             for top in sorted(lines):
                 row = sorted(lines[top], key=lambda w: w['x0'])
+                row_texts = [w['text'] for w in row]
 
-                # Skip rows that don't begin with a DD/MM/YYYY date
+                # Skip rows that don't contain a DD/MM/YYYY date
                 date_idx = None
                 for i, w in enumerate(row):
                     if _DATE_RE.match(w['text']):
                         date_idx = i
                         break
+
                 if date_idx is None:
+                    # Log non-data rows at lower verbosity
+                    print(
+                        f'[PDF DEBUG]   row y={top}: no date match — tokens: {row_texts}',
+                        flush=True,
+                    )
                     continue
+
+                print(
+                    f'[PDF DEBUG]   row y={top}: DATE MATCHED {row[date_idx]["text"]!r} '
+                    f'at index {date_idx} — full row: {row_texts}',
+                    flush=True,
+                )
 
                 dt = _date_to_iso(row[date_idx]['text'])
                 if not dt:
+                    print(f'[PDF DEBUG]   row y={top}: _date_to_iso failed', flush=True)
                     continue
 
                 # Tokens after the date → split into description and numbers
@@ -106,14 +160,22 @@ def parse_pdf(file_storage):
                     if _is_number(w['text']):
                         amount_words.append(w)
                     elif not amount_words:
-                        # Still in the description zone (no numbers seen yet)
                         desc_parts.append(w['text'])
 
                 description = ' '.join(desc_parts).strip()
+                amount_texts = [w['text'] for w in amount_words]
+                print(
+                    f'[PDF DEBUG]   desc={description!r}  amounts={amount_texts}',
+                    flush=True,
+                )
 
                 # Last numeric token is the running balance (יתרה) — discard it
                 value_words = amount_words[:-1] if len(amount_words) > 1 else amount_words
                 if not value_words:
+                    print(
+                        f'[PDF DEBUG]   no value tokens after dropping balance — skipping row',
+                        flush=True,
+                    )
                     continue
 
                 # Classify each remaining token as debit or credit
@@ -127,13 +189,26 @@ def parse_pdf(file_storage):
                     cx = (vw['x0'] + vw['x1']) / 2
 
                     if hova_cx is not None and zchut_cx is not None:
-                        if abs(cx - hova_cx) <= abs(cx - zchut_cx):
+                        dist_h = abs(cx - hova_cx)
+                        dist_z = abs(cx - zchut_cx)
+                        verdict = 'חובה(debit)' if dist_h <= dist_z else 'זכות(credit)'
+                        print(
+                            f'[PDF DEBUG]   amount {vw["text"]!r} cx={cx:.1f} '
+                            f'→ dist_חובה={dist_h:.1f} dist_זכות={dist_z:.1f} '
+                            f'→ classified as {verdict}',
+                            flush=True,
+                        )
+                        if dist_h <= dist_z:
                             debit_val = val
                         else:
                             credit_val = val
                     else:
-                        # Fallback when headers were not found:
-                        # assume left half = debit, right half = credit
+                        verdict = 'debit(fallback-left)' if cx <= page.width / 2 else 'credit(fallback-right)'
+                        print(
+                            f'[PDF DEBUG]   amount {vw["text"]!r} cx={cx:.1f} '
+                            f'page_width={page.width:.1f} — no headers, {verdict}',
+                            flush=True,
+                        )
                         if cx <= page.width / 2:
                             debit_val = val
                         else:
@@ -144,8 +219,13 @@ def parse_pdf(file_storage):
                 elif credit_val is not None:
                     amount = round(credit_val, 2)
                 else:
+                    print(f'[PDF DEBUG]   no debit or credit resolved — skipping row', flush=True)
                     continue
 
+                print(
+                    f'[PDF DEBUG]   → TRANSACTION: date={dt}  desc={description!r}  amount={amount}',
+                    flush=True,
+                )
                 transactions.append({
                     'date':             dt,
                     'description':      description,
@@ -153,4 +233,5 @@ def parse_pdf(file_storage):
                     'transaction_type': '',
                 })
 
+    print(f'[PDF DEBUG] parse complete — {len(transactions)} transaction(s) found', flush=True)
     return transactions

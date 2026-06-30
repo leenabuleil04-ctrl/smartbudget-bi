@@ -1,4 +1,5 @@
 import os
+import calendar
 from datetime import date
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import config
@@ -311,10 +312,15 @@ def delete_month_transactions():
         flash('No month specified', 'error')
         return redirect(url_for('transactions_page'))
     try:
+        year, mon = map(int, month.split('-'))
+        last_day = calendar.monthrange(year, mon)[1]
+        first = f'{month}-01'
+        last  = f'{month}-{last_day:02d}'
         supabase.table('transactions') \
             .delete() \
             .eq('student_id', user['id']) \
-            .like('date', f'{month}%') \
+            .gte('date', first) \
+            .lte('date', last) \
             .execute()
         flash(f'All transactions for {month} have been deleted', 'info')
     except Exception as e:

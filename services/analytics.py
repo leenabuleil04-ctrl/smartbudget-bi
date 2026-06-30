@@ -103,12 +103,17 @@ def generate_insights(spending_by_category, cbs_benchmarks, budget_goals):
     cbs_benchmarks       : list of dicts from Supabase, keys: category, monthly_avg
     budget_goals         : list of dicts from Supabase, keys: category, monthly_limit_ils
     """
-    # normalise raw Supabase lists into lookup dicts
-    cbs_map = {
-        row['category']: float(row.get('monthly_avg') or 0)
-        for row in (cbs_benchmarks or [])
-        if row.get('category')
-    }
+    # Average multiple rows per category (table may contain duplicates)
+    cbs_sums: dict = {}
+    cbs_counts: dict = {}
+    for row in (cbs_benchmarks or []):
+        cat = row.get('category')
+        val = float(row.get('monthly_avg') or 0)
+        if cat and val > 0:
+            cbs_sums[cat]   = cbs_sums.get(cat, 0.0)  + val
+            cbs_counts[cat] = cbs_counts.get(cat, 0)   + 1
+    cbs_map = {cat: cbs_sums[cat] / cbs_counts[cat] for cat in cbs_sums}
+
     goals_map = {
         row['category']: float(row.get('monthly_limit_ils') or 0)
         for row in (budget_goals or [])

@@ -245,6 +245,18 @@ CATEGORY_KEYWORDS = {
 # (e.g. 'טקריד' in PDF = 'דירקט' in logical Hebrew, reversed per word by pdfplumber)
 _KW_LOWER = {k.lower(): v for k, v in CATEGORY_KEYWORDS.items()}
 
+# Broader heuristic patterns checked AFTER exact keywords.
+# These are common substrings found in many merchant names — they reduce how often
+# unfamiliar merchants fall through to "Other" while keeping specific matches precise.
+CATEGORY_HEURISTICS = [
+    ('Food',          ['market', 'super', 'restaurant', 'cafe', 'food', 'bakery', 'pizza', 'burger']),
+    ('Transport',     ['fuel', 'gas', 'taxi', 'bus', 'train', 'parking', 'toll']),
+    ('Health',        ['pharm', 'clinic', 'doctor', 'hospital', 'dental']),
+    ('Education',     ['university', 'college', 'school', 'tuition', 'course']),
+    ('Entertainment', ['cinema', 'movie', 'netflix', 'spotify', 'theater', 'concert', 'tickets']),
+    ('Shopping',      ['store', 'shop', 'mall', 'fashion', 'electronics']),
+]
+
 
 def _reverse_words(text: str) -> str:
     """Reverse characters within each whitespace-separated token.
@@ -262,6 +274,7 @@ def categorize_description(description: str) -> str:
     text     = description.lower()
     text_rev = _reverse_words(text)   # char-reversed version for RTL PDFs
 
+    # Pass 1: exact merchant keyword list (specific, with RTL fallback)
     for kw, cat in _KW_LOWER.items():
         if kw in text:
             return cat
@@ -269,6 +282,12 @@ def categorize_description(description: str) -> str:
         # fragments are too likely to appear as substrings in unrelated reversed words.
         if len(kw) >= 3 and kw in text_rev:
             return cat
+
+    # Pass 2: broader heuristic substring patterns (English only, no RTL needed)
+    for cat, patterns in CATEGORY_HEURISTICS:
+        for pattern in patterns:
+            if pattern in text:
+                return cat
 
     return 'Other'
 

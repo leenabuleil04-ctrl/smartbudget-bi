@@ -314,6 +314,7 @@
     font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 36;
   }
 
+  .pie-container { position: relative; height: 320px; max-height: 320px; }
   #pieChart { cursor: pointer; }
   .pie-hint {
     display: flex;
@@ -670,7 +671,9 @@
       </div>
     </div>
     {% if metrics.total_expenses > 0 %}
-      <canvas id="pieChart"></canvas>
+      <div class="pie-container">
+        <canvas id="pieChart"></canvas>
+      </div>
       <p class="pie-hint">
         <span class="material-symbols-outlined">touch_app</span>
         Click a slice to drill down
@@ -829,6 +832,7 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { position: 'right' },
           tooltip: {

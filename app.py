@@ -3,7 +3,7 @@ import os
 import calendar
 from datetime import date
 from html import escape as _xe
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -379,6 +379,111 @@ def export_pdf():
         download_name=f'smartbudget_{selected_month}.pdf',
         mimetype='application/pdf',
     )
+
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get('question') or '').strip()
+    month    = (data.get('month')    or date.today().strftime('%Y-%m')).strip()
+
+    if not question:
+        return jsonify({'reply': 'Please ask a question.'}), 200
+
+    # ── Fetch this month's transactions ──
+    all_tx = []
+    try:
+        res = supabase.table('transactions').select('*').eq('student_id', user['id']).execute()
+        all_tx = res.data or []
+    except Exception:
+        pass
+
+    month_tx = [
+        t for t in all_tx
+        if (t.get('month') or t.get('date', '')[:7]) == month
+    ]
+    metrics = compute_metrics(month_tx)
+
+    # ── Fetch budget goals ──
+    goals_map = {}
+    try:
+        res = supabase.table('budget_goals').select('category,monthly_limit_ils') \
+            .eq('student_id', user['id']).execute()
+        for row in (res.data or []):
+            cat  = row.get('category')
+            goal = float(row.get('monthly_limit_ils') or 0)
+            if cat and goal > 0:
+                goals_map[cat] = goal
+    except Exception:
+        pass
+
+    # ── Build plain-text financial context ──
+    try:
+        from datetime import datetime as _dt
+        month_label = _dt.strptime(month, '%Y-%m').strftime('%B %Y')
+    except Exception:
+        month_label = month
+
+    cat_lines = []
+    for cat in CATEGORY_ORDER:
+        spent = metrics['by_category'].get(cat, 0.0)
+        goal  = goals_map.get(cat, 0.0)
+        if spent == 0 and goal == 0:
+            continue
+        if goal > 0:
+            status = 'over budget' if spent > goal else 'within budget'
+            cat_lines.append(
+                f'  {cat}: spent ₪{spent:,.0f} of ₪{goal:,.0f} limit ({status})'
+            )
+        else:
+            cat_lines.append(f'  {cat}: spent ₪{spent:,.0f} (no budget set)')
+
+    cat_section = '\n'.join(cat_lines) if cat_lines else '  No spending recorded yet.'
+
+    system_prompt = (
+        f'You are SmartBudget BI, a friendly personal finance assistant for Israeli students.\n'
+        f'The user is asking about their finances for {month_label}.\n\n'
+        f'FINANCIAL SUMMARY FOR {month_label}:\n'
+        f'  Total income:   ₪{metrics["total_income"]:,.0f}\n'
+        f'  Total expenses: ₪{metrics["total_expenses"]:,.0f}\n'
+        f'  Balance:        ₪{metrics["balance"]:,.0f}\n\n'
+        f'SPENDING BY CATEGORY:\n'
+        f'{cat_section}\n\n'
+        f'INSTRUCTIONS:\n'
+        f'- Answer only using the data above. If asked about something not in this data, '
+        f'say "I don\'t have that information."\n'
+        f'- Be concise: 2–4 sentences unless the user explicitly asks for detail.\n'
+        f'- Use ₪ for all currency amounts.\n'
+        f'- Be encouraging and constructive, never judgmental.\n'
+        f'- Do not fabricate data or reference external sources.\n'
+    )
+
+    # ── Call OpenAI ──
+    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    if not api_key:
+        return jsonify({'reply': "Sorry, I can't answer right now — the AI service isn't configured."}), 200
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        completion = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user',   'content': question},
+            ],
+            max_tokens=300,
+            temperature=0.4,
+        )
+        reply = completion.choices[0].message.content.strip()
+    except Exception:
+        reply = "Sorry, I can't answer right now. Please try again later."
+
+    return jsonify({'reply': reply}), 200
 
 
 @app.route('/recategorize', methods=['POST'])

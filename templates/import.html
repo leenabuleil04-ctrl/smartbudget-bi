@@ -7,7 +7,7 @@
   .import-wrap { max-width: 720px; margin: 0 auto; }
 
   /* ── Page header ── */
-  .import-header { margin-bottom: 32px; }
+  .import-header { margin-bottom: 28px; }
   .import-header h2 {
     font-size: 28px;
     font-weight: 700;
@@ -22,55 +22,207 @@
     max-width: 560px;
   }
 
-  /* ── Month picker row ── */
-  .month-pick-row {
+  /* ── Year selector ── */
+  .year-selector {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .year-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .year-nav-btn:hover {
+    background: var(--surface-container);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .year-nav-btn .material-symbols-outlined {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+  .year-label {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--on-surface);
+    letter-spacing: -0.02em;
+    min-width: 56px;
+    text-align: center;
+  }
+
+  /* ── Month grid ── */
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 11px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 560px) {
+    .month-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .month-box {
+    position: relative;
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    min-height: 78px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    user-select: none;
+    outline: none;
+  }
+  .month-box:hover { transform: translateY(-2px); }
+  .month-box:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* Empty */
+  .month-box.empty {
+    border: 2px dashed var(--outline-variant);
+    background: var(--surface-container-lowest);
+  }
+  .month-box.empty:hover {
+    border-color: var(--primary);
+    background: rgba(0,92,85,0.04);
+    box-shadow: 0 2px 8px rgba(0,92,85,0.10);
+  }
+  .month-box.empty.active {
+    border-color: var(--primary);
+    border-style: solid;
+    background: rgba(0,92,85,0.06);
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.15);
+  }
+
+  /* Filled */
+  .month-box.filled {
+    background: var(--primary);
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0,92,85,0.28);
+  }
+  .month-box.filled:hover {
+    box-shadow: 0 6px 18px rgba(0,92,85,0.38);
+  }
+  .month-box.filled.active {
+    box-shadow: 0 0 0 3px rgba(0,92,85,0.38), 0 4px 14px rgba(0,92,85,0.32);
+  }
+
+  .month-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    line-height: 1;
+  }
+  .month-box.filled .month-name { color: rgba(255,255,255,0.75); }
+
+  .month-total {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--on-surface);
+    line-height: 1;
+    margin-top: 10px;
+    word-break: break-all;
+  }
+  .month-box.filled .month-total { color: #fff; }
+
+  .month-empty-hint {
+    font-size: 11px;
+    color: var(--outline);
+    margin-top: 6px;
+    line-height: 1;
+  }
+
+  /* Plus re-upload icon on filled boxes */
+  .month-reupload-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.18);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    color: #fff;
+    padding: 0;
+    z-index: 2;
+  }
+  .month-reupload-btn:hover { background: rgba(255,255,255,0.38); }
+  .month-reupload-btn .material-symbols-outlined {
+    font-size: 13px;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+  }
+
+  /* ── Inline upload wrapper (collapsed by default) ── */
+  .inline-upload-wrapper {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.42s cubic-bezier(0.4,0,0.2,1), opacity 0.30s ease;
+  }
+  .inline-upload-wrapper.open {
+    max-height: 920px;
+    opacity: 1;
+  }
+
+  /* Header bar inside wrapper */
+  .upload-for-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: var(--surface-container-lowest);
     border: 1px solid var(--outline-variant);
     border-radius: 14px;
-    padding: 14px 20px;
-    margin-bottom: 20px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
     box-shadow: var(--shadow-sm);
   }
-  .month-pick-label {
+  .upload-for-label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     font-size: 14px;
     font-weight: 600;
     color: var(--on-surface);
-    white-space: nowrap;
-    flex-shrink: 0;
   }
-  .month-pick-label .material-symbols-outlined {
+  .upload-for-label .material-symbols-outlined {
     font-size: 18px;
     color: var(--primary);
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
   }
-  .month-pick-input {
-    padding: 8px 12px;
-    border: 1px solid var(--outline-variant);
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--on-surface);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    flex-shrink: 0;
+  .close-upload-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--outline);
+    padding: 5px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, background 0.15s;
   }
-  .month-pick-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0,92,85,0.10);
-  }
-  .month-pick-hint {
-    font-size: 12px;
-    color: var(--on-surface-variant);
-    line-height: 1.4;
+  .close-upload-btn:hover { color: var(--error); background: var(--error-container); }
+  .close-upload-btn .material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
   }
 
   /* ── Dashed upload zone ── */
@@ -80,10 +232,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 300px;
+    min-height: 280px;
     padding: 40px 32px;
     background: #ffffff;
-    /* SVG dashed border — teal #0F766E, 12px dash, 16px radius */
     background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%230F766EFF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
     border-radius: 16px;
     cursor: pointer;
@@ -93,11 +244,9 @@
     text-align: center;
   }
   .upload-zone:hover,
-  .upload-zone.drag-over {
-    background-color: rgba(0, 92, 85, 0.04);
-  }
+  .upload-zone.drag-over { background-color: rgba(0,92,85,0.04); }
   .upload-zone.has-file {
-    background-color: rgba(0, 92, 85, 0.03);
+    background-color: rgba(0,92,85,0.03);
     background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23005c55FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
   }
 
@@ -106,7 +255,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: var(--primary-fixed);   /* #9cf2e8 */
+    background: var(--primary-fixed);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -115,9 +264,7 @@
     flex-shrink: 0;
   }
   .upload-zone:hover .upload-icon-ring,
-  .upload-zone.drag-over .upload-icon-ring {
-    transform: scale(1.08);
-  }
+  .upload-zone.drag-over .upload-icon-ring { transform: scale(1.08); }
   .upload-icon-ring .material-symbols-outlined {
     font-size: 36px;
     color: var(--primary);
@@ -143,7 +290,6 @@
   }
   .upload-sub strong { color: var(--on-surface); }
 
-  /* hidden file input covers the whole zone so clicking anywhere opens dialog */
   .file-input-hidden {
     position: absolute;
     inset: 0;
@@ -153,7 +299,7 @@
     cursor: pointer;
   }
 
-  /* ── File info card (appears after selection) ── */
+  /* ── File info card ── */
   .file-info-card {
     display: none;
     align-items: center;
@@ -214,7 +360,7 @@
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
   }
 
-  /* ── Processing indicator (shown on submit) ── */
+  /* ── Processing indicator ── */
   .processing-bar { display: none; margin-bottom: 16px; }
   .processing-bar.visible { display: block; }
   .proc-track {
@@ -228,7 +374,7 @@
   .proc-fill {
     height: 100%;
     border-radius: 999px;
-    background: var(--primary-container);   /* #0f766e */
+    background: var(--primary-container);
     box-shadow: 0 0 10px rgba(15,118,110,0.35);
     animation: procIndeterminate 1.6s ease-in-out infinite;
   }
@@ -335,75 +481,123 @@
     <p>Upload your bank or credit card statement (CSV or PDF) to analyze your spending.</p>
   </div>
 
-  <!-- ── Month picker ── -->
-  <div class="month-pick-row">
-    <label class="month-pick-label" for="importMonth">
-      <span class="material-symbols-outlined">calendar_month</span>
-      Tag transactions to month
-    </label>
-    <input
-      type="month"
-      id="importMonth"
-      name="month"
-      value="{{ default_month }}"
-      class="month-pick-input"
-    >
-    <span class="month-pick-hint">Dashboard will open on this month after import</span>
+  <!-- ── Year selector ── -->
+  <div class="year-selector">
+    <a href="?year={{ selected_year - 1 }}" class="year-nav-btn" title="Previous year">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </a>
+    <span class="year-label">{{ selected_year }}</span>
+    <a href="?year={{ selected_year + 1 }}" class="year-nav-btn" title="Next year">
+      <span class="material-symbols-outlined">chevron_right</span>
+    </a>
   </div>
 
-  <!-- ── Form — preserves method, enctype, and input name ── -->
-  <form method="post" enctype="multipart/form-data" id="importForm">
+  <!-- ── Month grid ── -->
+  <div class="month-grid" id="monthGrid">
+    {% for m in months_info %}
+      {% if m.total is not none %}
+        <!-- Filled month: has transactions -->
+        <div class="month-box filled"
+             data-month="{{ m.ym }}"
+             data-label="{{ m.full_name }} {{ selected_year }}"
+             data-dashboard="/dashboard?month={{ m.ym }}"
+             role="button"
+             tabindex="0"
+             aria-label="{{ m.full_name }} {{ selected_year }}, ₪{{ '{:,.0f}'.format(m.total) }} spent — click to view dashboard">
+          <button type="button"
+                  class="month-reupload-btn"
+                  data-month="{{ m.ym }}"
+                  data-label="{{ m.full_name }} {{ selected_year }}"
+                  title="Add more transactions for {{ m.full_name }}">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <span class="month-name">{{ m.name }}</span>
+          <span class="month-total">₪{{ '{:,.0f}'.format(m.total) }}</span>
+        </div>
+      {% else %}
+        <!-- Empty month: no transactions yet -->
+        <div class="month-box empty"
+             data-month="{{ m.ym }}"
+             data-label="{{ m.full_name }} {{ selected_year }}"
+             role="button"
+             tabindex="0"
+             aria-label="{{ m.full_name }} {{ selected_year }}, no data — click to upload">
+          <span class="month-name">{{ m.name }}</span>
+          <span class="month-empty-hint">Upload</span>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
 
-    <!-- Dashed upload zone -->
-    <div class="upload-zone" id="dropzone">
-      <div class="upload-icon-ring">
-        <span class="material-symbols-outlined">upload</span>
-      </div>
-      <p class="upload-headline" id="uploadHeadline">
-        Drag and drop your file or
-        <span class="browse-link">Browse Files</span>
-      </p>
-      <p class="upload-sub">Supported formats: <strong>CSV</strong> or <strong>PDF</strong></p>
-      <!-- Covers entire zone — click anywhere opens file dialog -->
-      <input
-        type="file"
-        name="file"
-        accept=".csv,.pdf"
-        id="fileInput"
-        class="file-input-hidden"
-      >
-    </div>
+  <!-- ── Inline upload (collapsed until a month is selected) ── -->
+  <div class="inline-upload-wrapper" id="inlineUploadWrapper">
 
-    <!-- File info card (shown after file selected) -->
-    <div class="file-info-card" id="fileInfoCard">
-      <div class="file-icon-box">
-        <span class="material-symbols-outlined">description</span>
+    <!-- Which month we're uploading for -->
+    <div class="upload-for-header">
+      <div class="upload-for-label">
+        <span class="material-symbols-outlined">calendar_month</span>
+        Uploading for: <strong id="uploadMonthLabel">—</strong>
       </div>
-      <div class="file-info-text">
-        <div class="file-info-name" id="fileName">—</div>
-        <div class="file-info-meta" id="fileMeta">CSV File</div>
-      </div>
-      <button type="button" class="file-remove" id="removeFile" title="Remove file">
+      <button type="button" class="close-upload-btn" id="closeUploadBtn" title="Cancel">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
-    <!-- Processing indicator (shown on submit) -->
-    <div class="processing-bar" id="processingBar">
-      <div class="proc-track"><div class="proc-fill"></div></div>
-      <div class="proc-label">
-        <div class="proc-dot"></div>
-        Processing your file…
+    <!-- Form — method, enctype, and file input name preserved -->
+    <form method="post" enctype="multipart/form-data" id="importForm">
+      <input type="hidden" name="month" id="selectedMonthInput" value="{{ default_month }}">
+
+      <!-- Dashed upload zone -->
+      <div class="upload-zone" id="dropzone">
+        <div class="upload-icon-ring">
+          <span class="material-symbols-outlined">upload</span>
+        </div>
+        <p class="upload-headline" id="uploadHeadline">
+          Drag and drop your file or
+          <span class="browse-link">Browse Files</span>
+        </p>
+        <p class="upload-sub">Supported formats: <strong>CSV</strong> or <strong>PDF</strong></p>
+        <!-- Covers entire zone — click anywhere opens file dialog -->
+        <input
+          type="file"
+          name="file"
+          accept=".csv,.pdf"
+          id="fileInput"
+          class="file-input-hidden"
+        >
       </div>
-    </div>
 
-    <!-- Submit -->
-    <button type="submit" class="btn-upload" id="submitBtn" disabled>
-      <span class="material-symbols-outlined">upload_file</span>
-      Upload &amp; Analyze
-    </button>
+      <!-- File info card (shown after file selected) -->
+      <div class="file-info-card" id="fileInfoCard">
+        <div class="file-icon-box">
+          <span class="material-symbols-outlined">description</span>
+        </div>
+        <div class="file-info-text">
+          <div class="file-info-name" id="fileName">—</div>
+          <div class="file-info-meta" id="fileMeta">CSV File</div>
+        </div>
+        <button type="button" class="file-remove" id="removeFile" title="Remove file">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
 
-  </form>
+      <!-- Processing indicator (shown on submit) -->
+      <div class="processing-bar" id="processingBar">
+        <div class="proc-track"><div class="proc-fill"></div></div>
+        <div class="proc-label">
+          <div class="proc-dot"></div>
+          Processing your file…
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="btn-upload" id="submitBtn" disabled>
+        <span class="material-symbols-outlined">upload_file</span>
+        Upload &amp; Analyze
+      </button>
+
+    </form>
+  </div>
 
   <!-- ── Tips ── -->
   <div class="tips-grid">
@@ -440,6 +634,7 @@
 </div>
 
 <script>
+  /* ── Upload file handling (unchanged behaviour) ── */
   const fileInput      = document.getElementById('fileInput');
   const dropzone       = document.getElementById('dropzone');
   const fileInfoCard   = document.getElementById('fileInfoCard');
@@ -452,8 +647,8 @@
   const uploadHeadline = document.getElementById('uploadHeadline');
 
   function formatBytes(b) {
-    if (b < 1024)           return b + ' B';
-    if (b < 1024 * 1024)    return (b / 1024).toFixed(1) + ' KB';
+    if (b < 1024)        return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
     return (b / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
@@ -477,7 +672,7 @@
     dropzone.classList.remove('has-file');
     submitBtn.disabled = true;
     uploadHeadline.innerHTML =
-      'Drag and drop your CSV file or <span class="browse-link">Browse Files</span>';
+      'Drag and drop your file or <span class="browse-link">Browse Files</span>';
   }
 
   fileInput.addEventListener('change', () => {
@@ -498,13 +693,12 @@
     e.preventDefault();
     dropzone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    const allowed = /\.(csv|pdf)$/i;
-    if (file && allowed.test(file.name)) {
+    if (file && /\.(csv|pdf)$/i.test(file.name)) {
       try {
         const dt = new DataTransfer();
         dt.items.add(file);
         fileInput.files = dt.files;
-      } catch (_) { /* Safari fallback — form submit still works */ }
+      } catch (_) { /* Safari fallback */ }
       setFile(file);
     }
   });
@@ -515,6 +709,82 @@
     submitBtn.innerHTML =
       '<span class="material-symbols-outlined">hourglass_empty</span> Processing…';
     processingBar.classList.add('visible');
+  });
+
+  /* ── Month grid & inline upload expand/collapse ── */
+  const wrapper        = document.getElementById('inlineUploadWrapper');
+  const monthLabelEl   = document.getElementById('uploadMonthLabel');
+  const monthInput     = document.getElementById('selectedMonthInput');
+  const closeBtn       = document.getElementById('closeUploadBtn');
+  let   activeBox      = null;
+
+  function openUploadFor(ym, label) {
+    monthInput.value         = ym;
+    monthLabelEl.textContent = label;
+    wrapper.classList.add('open');
+    clearFile();
+    /* Scroll into view after the CSS transition starts */
+    setTimeout(() => wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+  }
+
+  function closeUpload() {
+    wrapper.classList.remove('open');
+    clearFile();
+    if (activeBox) {
+      activeBox.classList.remove('active');
+      activeBox = null;
+    }
+  }
+
+  function setActive(box) {
+    if (activeBox && activeBox !== box) activeBox.classList.remove('active');
+    activeBox = box;
+    box.classList.add('active');
+  }
+
+  closeBtn.addEventListener('click', closeUpload);
+
+  /* Empty month: click to expand upload */
+  document.querySelectorAll('.month-box.empty').forEach(box => {
+    function toggle() {
+      if (wrapper.classList.contains('open') && activeBox === box) {
+        closeUpload();
+      } else {
+        setActive(box);
+        openUploadFor(box.dataset.month, box.dataset.label);
+      }
+    }
+    box.addEventListener('click', toggle);
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  });
+
+  /* Filled month: click navigates to dashboard; plus button expands upload */
+  document.querySelectorAll('.month-box.filled').forEach(box => {
+    box.addEventListener('click', e => {
+      if (e.target.closest('.month-reupload-btn')) return;
+      window.location.href = box.dataset.dashboard;
+    });
+    box.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.month-reupload-btn')) {
+        e.preventDefault();
+        window.location.href = box.dataset.dashboard;
+      }
+    });
+  });
+
+  document.querySelectorAll('.month-reupload-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const box = btn.closest('.month-box');
+      if (wrapper.classList.contains('open') && activeBox === box) {
+        closeUpload();
+      } else {
+        setActive(box);
+        openUploadFor(btn.dataset.month, btn.dataset.label);
+      }
+    });
   });
 </script>
 

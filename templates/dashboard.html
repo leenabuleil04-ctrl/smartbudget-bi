@@ -488,6 +488,11 @@
   </div>
 </div>
 
+<!-- ── Analysis Month Banner ── -->
+<div class="fi-1" style="font-size:14px;font-weight:600;color:var(--on-surface-variant);margin-bottom:16px;padding:10px 16px;background:var(--surface-container-low);border:1px solid var(--outline-variant);border-radius:12px;">
+  Analysis month: <strong style="color:var(--on-surface);">{{ selected_month_display }}</strong>
+</div>
+
 <!-- ── Savings Forecast Banner ── -->
 {% if not transactions %}
 <div class="forecast-banner grey fi-1">
@@ -576,6 +581,47 @@
 </div>
 {% endif %}
 
+<style>
+  .cbs-cmp { display: flex; flex-direction: column; gap: 0; }
+  .cbs-row { display: grid; grid-template-columns: 1fr 2fr auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--outline-variant); }
+  .cbs-row:last-child { border-bottom: none; }
+  .cbs-cat { font-size: 13px; font-weight: 600; color: var(--on-surface); }
+  .cbs-nums { font-size: 13px; color: var(--on-surface-variant); }
+  .cbs-vs { font-size: 12px; color: var(--outline); margin: 2px 0 0; }
+  .cbs-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.03em; white-space: nowrap; }
+  .cbs-badge.over { background: #fff1f2; color: #991b1b; }
+  .cbs-badge.under { background: #f0fdf4; color: #166534; }
+  .cbs-badge.near { background: var(--surface-container-high); color: var(--on-surface-variant); }
+  @media (max-width: 640px) { .cbs-row { grid-template-columns: 1fr auto; } .cbs-nums { display: none; } }
+</style>
+
+{% if cbs_comparison %}
+<div class="sc fi-4">
+  <div class="sc-header" style="margin-bottom:16px;">
+    <div>
+      <div class="sc-title">Spending vs National Average (CBS)</div>
+      <div class="sc-sub">Category-level comparison to Israeli household benchmarks</div>
+    </div>
+    <div class="sc-icon">
+      <span class="material-symbols-outlined">compare_arrows</span>
+    </div>
+  </div>
+  <div class="cbs-cmp">
+    {% for row in cbs_comparison %}
+    <div class="cbs-row">
+      <span class="cbs-cat">{{ row.category }}</span>
+      <div class="cbs-nums">₪{{ '%.0f'|format(row.spent) }} vs ₪{{ '%.0f'|format(row.benchmark) }} avg</div>
+      <span class="cbs-badge {{ row.status }}">
+        {% if row.status == 'over' %}▲ {{ row.pct }}% of avg
+        {% elif row.status == 'under' %}▼ {{ row.pct }}% of avg
+        {% else %}≈ on par{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Spending Alerts ── -->
 {% if alerts %}
 <div class="sc fi-4">
@@ -602,7 +648,7 @@
       <div>
         <div class="sc-title">My Spending vs CBS Average</div>
         <div class="sc-sub">National benchmark comparison by category</div>
-        <p class="chart-caption">See how your spending compares to typical Israeli students in each category — helps you spot where you're overspending.</p>
+        <p class="chart-caption">See how your spending compares to typical Israeli students in each category - helps you spot where you're overspending.</p>
       </div>
     </div>
     {% if metrics.total_expenses > 0 %}
@@ -610,7 +656,7 @@
     {% else %}
       <div class="no-data">
         <span class="material-symbols-outlined">bar_chart</span>
-        No expense data yet — import a CSV to see this chart.
+        No expense data yet - import a CSV to see this chart.
       </div>
     {% endif %}
   </div>
@@ -632,7 +678,7 @@
     {% else %}
       <div class="no-data">
         <span class="material-symbols-outlined">pie_chart</span>
-        No expense data yet — import a CSV to see this chart.
+        No expense data yet - import a CSV to see this chart.
       </div>
     {% endif %}
   </div>
@@ -659,7 +705,7 @@
 <div class="sc fi-6">
   <div class="sc-header">
     <div>
-      <div class="sc-title">Monthly Spending Trend — Last 6 Months</div>
+      <div class="sc-title">Monthly Spending Trend - Last 6 Months</div>
       <div class="sc-sub">Comparison over recent months</div>
     </div>
   </div>
@@ -669,7 +715,7 @@
   {% else %}
     <div class="no-data">
       <span class="material-symbols-outlined">show_chart</span>
-      No expense data yet — import a CSV to see this chart.
+      No expense data yet - import a CSV to see this chart.
     </div>
   {% endif %}
 </div>
@@ -713,11 +759,11 @@
                style="width:{{ [data.pct, 100] | min }}%"></div>
         </div>
         <div class="budget-pct {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}">
-          {{ data.pct }}%{% if data.pct >= 100 %} — over budget{% endif %}
+          {{ data.pct }}%{% if data.pct >= 100 %} - over budget{% endif %}
         </div>
       </div>
       {% endfor %}
-      <a href="{{ url_for('budget') }}" class="budget-edit-link">
+      <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
         Edit goals <span class="material-symbols-outlined">arrow_forward</span>
       </a>
     {% else %}
@@ -725,7 +771,7 @@
         <span class="material-symbols-outlined">savings</span>
         No budget goals set yet.
       </div>
-      <a href="{{ url_for('budget') }}" class="budget-edit-link">
+      <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
         Set budget goals <span class="material-symbols-outlined">arrow_forward</span>
       </a>
     {% endif %}
@@ -839,7 +885,7 @@
       return t.category === category && amt < 0;
     });
 
-    document.getElementById('ddTitle').textContent = category + ' — Transactions';
+    document.getElementById('ddTitle').textContent = category + ' - Transactions';
 
     const tbody = document.getElementById('ddBody');
     if (rows.length === 0) {
@@ -849,7 +895,7 @@
         .sort((a, b) => b.date.localeCompare(a.date))
         .map(t => {
           const amt = Math.abs(parseFloat(t.amount)).toFixed(2);
-          const desc = t.description || '—';
+          const desc = t.description || '-';
           return `<tr><td>${t.date}</td><td>${desc}</td><td>₪${amt}</td></tr>`;
         })
         .join('');

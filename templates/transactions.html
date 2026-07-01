@@ -592,8 +592,17 @@
   </span>
 </div>
 
+{% if period_label %}
+<p class="tx-period" style="font-size:14px;font-weight:600;color:var(--on-surface-variant);margin-bottom:16px;padding:10px 16px;background:var(--surface-container-low);border:1px solid var(--outline-variant);border-radius:12px;margin-top:0;">
+  Transactions period: <strong style="color:var(--on-surface);">{{ period_label }}</strong>
+</p>
+{% endif %}
+
 <!-- ── Filter bar ── -->
 <form method="GET" action="{{ url_for('transactions_page') }}" class="filter-card">
+  {% if selected_month %}
+  <input type="hidden" name="month" value="{{ selected_month }}">
+  {% endif %}
 
   <div class="filter-search-wrap">
     <span class="material-symbols-outlined">search</span>
@@ -622,7 +631,7 @@
       Filter
     </button>
     {% if f_category or f_date_from or f_date_to or f_search %}
-    <a href="{{ url_for('transactions_page') }}" class="btn-clear-filter">
+    <a href="{{ url_for('transactions_page', month=selected_month) if selected_month else url_for('transactions_page') }}" class="btn-clear-filter">
       <span class="material-symbols-outlined">close</span>
       Clear
     </a>
@@ -655,7 +664,7 @@
          data-cat="{{ t.category }}"
          data-amount="{{ t.amount }}">
       <div class="tx-date">{{ t.date }}</div>
-      <div class="tx-desc">{{ t.description or '—' }}</div>
+      <div class="tx-desc">{{ t.description or '-' }}</div>
       <div class="tx-cat">
         <span class="cat-badge" data-cat="{{ t.category }}">{{ t.category }}</span>
       </div>
@@ -738,6 +747,11 @@
     </form>
   </div>
 </div>
+
+{% if step == 3 %}
+{% set _qm = ('?month=' ~ selected_month) if selected_month else '' %}
+<div class="step-continue" style="margin-bottom: 8px;"><a class="step-next-btn" href="{{ url_for('budget') }}{{ _qm }}">Continue to Budget &rarr;</a></div>
+{% endif %}
 
 <!-- ── Sticky summary bar ── -->
 <div class="tx-summary-bar">
@@ -907,3 +921,4 @@
 </script>
 
 {% endblock %}
+{% block step_continue %}{% endblock %}

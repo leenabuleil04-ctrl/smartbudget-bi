@@ -8,6 +8,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .stepper { display: flex; align-items: center; margin: 0 0 24px; padding: 0; list-style: none; }
+    .stepper .step { display: flex; align-items: center; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; border: 2px solid #ccc; background: #fff; color: #999; }
+    .step-label { font-size: 13px; font-weight: 600; margin-left: 8px; color: #999; white-space: nowrap; }
+    .stepper .step.active .step-num { background: #005c55; border-color: #005c55; color: #fff; }
+    .stepper .step.active .step-label { color: #005c55; }
+    .stepper .step.done .step-num { background: #80d5cb; border-color: #80d5cb; color: #005c55; }
+    .stepper .step.done .step-label { color: #005c55; }
+    .step-line { flex: 1; height: 2px; background: #e0e0e0; margin: 0 8px; min-width: 20px; }
+    .step-line.done { background: #80d5cb; }
+    .step-continue { margin: 16px 0 0; text-align: right; }
+    .step-next-btn { display: inline-block; padding: 8px 20px; background: #005c55; color: #fff; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; transition: background 0.15s; }
+    .step-next-btn:hover { background: #003d38; text-decoration: none; color: #fff; }
+    @media (max-width: 640px) { .step-label { display: none; } }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -30,6 +46,29 @@
   </header>
 
   <main class="container">
+    {% if step %}
+    {% set _steps = [(1,'Log in','login'),(2,'Import','import_page'),(3,'Transactions','transactions_page'),(4,'Budget','budget'),(5,'Dashboard','dashboard')] %}
+    <ol class="stepper">
+      {% for n, label, ep in _steps %}
+      <li class="step {% if n < step %}done{% elif n == step %}active{% else %}todo{% endif %}">
+        {% if session.get('user') and n != step %}
+        <a href="{{ url_for(ep) }}{{ ('?month=' ~ selected_month) if selected_month else '' }}" style="display:flex;align-items:center;text-decoration:none;">
+          <span class="step-num">{% if n < step %}✓{% else %}{{ n }}{% endif %}</span>
+          <span class="step-label">{{ label }}</span>
+        </a>
+        {% else %}
+        <span style="display:flex;align-items:center;">
+          <span class="step-num">{% if n < step %}✓{% else %}{{ n }}{% endif %}</span>
+          <span class="step-label">{{ label }}</span>
+        </span>
+        {% endif %}
+      </li>
+      {% if not loop.last %}
+      <span class="step-line {% if n < step %}done{% endif %}"></span>
+      {% endif %}
+      {% endfor %}
+    </ol>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="messages">
@@ -41,6 +80,17 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
+    {% block step_continue %}
+    {% if step and step >= 2 and step < 5 %}
+    {% set _next = {2:('transactions_page','Transactions'),3:('budget','Budget'),4:('dashboard','Dashboard')} %}
+    {% set _qm = ('?month=' ~ selected_month) if selected_month else '' %}
+    <div class="step-continue"><a class="step-next-btn" href="{{ url_for(_next[step][0]) }}{{ _qm }}">Continue to {{ _next[step][1] }} &rarr;</a></div>
+    {% endif %}
+    {% if step == 5 %}
+    {% set _qm = ('?month=' ~ selected_month) if selected_month else '' %}
+    <div class="step-continue"><a class="step-next-btn" href="{{ url_for('import_page') }}{{ _qm }}">Import another CSV &rarr;</a></div>
+    {% endif %}
+    {% endblock %}
   </main>
 
   <footer class="footer container">

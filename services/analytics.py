@@ -100,7 +100,7 @@ def generate_insights(spending_by_category, cbs_benchmarks, budget_goals):
     """Return a list of insight dicts: {type, icon, text}.
 
     spending_by_category : {category: float}         — expenses this month (positive)
-    cbs_benchmarks       : list of dicts from Supabase, keys: category, monthly_avg
+    cbs_benchmarks       : list of dicts from Supabase, keys: category, avg_monthly_ils
     budget_goals         : list of dicts from Supabase, keys: category, monthly_limit_ils
     """
     # Average multiple rows per category (table may contain duplicates)
@@ -108,7 +108,7 @@ def generate_insights(spending_by_category, cbs_benchmarks, budget_goals):
     cbs_counts: dict = {}
     for row in (cbs_benchmarks or []):
         cat = row.get('category')
-        val = float(row.get('monthly_avg') or 0)
+        val = float(row.get('avg_monthly_ils') or 0)
         if cat and val > 0:
             cbs_sums[cat]   = cbs_sums.get(cat, 0.0)  + val
             cbs_counts[cat] = cbs_counts.get(cat, 0)   + 1

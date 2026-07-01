@@ -283,7 +283,7 @@
       <h2>Monthly Budget Goals</h2>
       <p class="sub">Set a spending limit per category for this month. Leave blank to skip a category.</p>
     </div>
-    <a href="{{ url_for('dashboard') }}" class="budget-dash-link">
+    <a href="{{ url_for('dashboard', month=selected_month) }}" class="budget-dash-link">
       <span class="material-symbols-outlined">dashboard</span>
       View Dashboard
     </a>
@@ -299,7 +299,7 @@
   </div>
 
   <!-- ── Form ── -->
-  <form method="POST" action="{{ url_for('budget') }}">
+  <form method="POST" action="{{ url_for('budget', month=selected_month) }}">
 
     <div class="cat-grid">
       {% for cat in categories %}

@@ -28,29 +28,55 @@ except Exception:
 
 # ── CBS benchmark seed data (Feature 2) ──
 CBS_BENCHMARK_DATA = [
-    {'category': 'Food',          'monthly_avg': 1200},
-    {'category': 'Rent',          'monthly_avg': 2800},
-    {'category': 'Transport',     'monthly_avg': 600},
-    {'category': 'Entertainment', 'monthly_avg': 400},
-    {'category': 'Education',     'monthly_avg': 500},
-    {'category': 'Health',        'monthly_avg': 300},
-    {'category': 'Shopping',      'monthly_avg': 800},
-    {'category': 'Other',         'monthly_avg': 400},
+    {'category': 'Food',          'avg_monthly_ils': 1200},
+    {'category': 'Rent',          'avg_monthly_ils': 2800},
+    {'category': 'Transport',     'avg_monthly_ils': 600},
+    {'category': 'Entertainment', 'avg_monthly_ils': 400},
+    {'category': 'Education',     'avg_monthly_ils': 500},
+    {'category': 'Health',        'avg_monthly_ils': 300},
+    {'category': 'Shopping',      'avg_monthly_ils': 800},
+    {'category': 'Other',         'avg_monthly_ils': 400},
 ]
 
 
 def seed_cbs_benchmarks():
+    """Insert any missing CBS benchmark rows. Reads existing categories first
+    so it works whether or not the table already has data, and needs no
+    UNIQUE constraint (avoids the silent on_conflict failure)."""
     if supabase is None:
         return
     try:
-        supabase.table('cbs_benchmarks').upsert(
-            CBS_BENCHMARK_DATA, on_conflict='category'
-        ).execute()
-    except Exception:
-        pass
+        res = supabase.table('cbs_benchmarks').select('category').execute()
+        existing = {r.get('category') for r in (res.data or [])}
+    except Exception as e:
+        print(f'[seed_cbs] could not read table: {e}', flush=True)
+        existing = set()
+    missing = [row for row in CBS_BENCHMARK_DATA if row['category'] not in existing]
+    if not missing:
+        return
+    try:
+        supabase.table('cbs_benchmarks').insert(missing).execute()
+        print(f'[seed_cbs] inserted {len(missing)} benchmark row(s)', flush=True)
+    except Exception as e:
+        print(f'[seed_cbs] insert failed: {e}', flush=True)
 
 
 seed_cbs_benchmarks()
+
+
+def _latest_user_month(user_id):
+    """Return YYYY-MM of the user's most recent transaction, or today's month."""
+    if supabase is None:
+        return date.today().strftime('%Y-%m')
+    try:
+        res = supabase.table('transactions').select('date') \
+            .eq('student_id', user_id) \
+            .order('date', desc=True).limit(1).execute()
+        if res.data:
+            return (res.data[0].get('date') or '')[:7] or date.today().strftime('%Y-%m')
+    except Exception:
+        pass
+    return date.today().strftime('%Y-%m')
 
 
 @app.route('/')
@@ -65,10 +91,10 @@ def dashboard():
         flash('Please log in to view the dashboard', 'error')
         return redirect(url_for('login'))
 
-    # Feature 3: month filter from query param, default to current month
+    # Feature 3: month filter — fallback to latest transaction month, then today
     selected_month = request.args.get('month', '').strip()
     if not selected_month:
-        selected_month = date.today().strftime('%Y-%m')
+        selected_month = _latest_user_month(user['id'])
 
     # Fetch all transactions to build available-months list
     all_transactions = []
@@ -108,7 +134,7 @@ def dashboard():
     cbs_benchmarks_raw = []
     cbs_by_category = {}
     try:
-        res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
+        res = supabase.table('cbs_benchmarks').select('category,avg_monthly_ils').execute()
         if not getattr(res, 'error', None) and res.data:
             cbs_benchmarks_raw = res.data
             # Average multiple rows per category before building chart values
@@ -116,7 +142,7 @@ def dashboard():
             _cbs_counts: dict = {}
             for row in res.data:
                 cat = (row.get('category') or '').strip()
-                val = float(row.get('monthly_avg', 0) or 0)
+                val = float(row.get('avg_monthly_ils', 0) or 0)
                 if cat and val > 0:
                     _cbs_sums[cat]   = _cbs_sums.get(cat, 0.0) + val
                     _cbs_counts[cat] = _cbs_counts.get(cat, 0)  + 1
@@ -127,6 +153,25 @@ def dashboard():
     except Exception:
         pass
     cbs_values = [cbs_by_category.get(c, 0) for c in cat_labels]
+
+    # CBS comparison by category for the selected month: over / under / on-par
+    cbs_comparison = []
+    for c in cat_labels:
+        spent = float(metrics['by_category'].get(c, 0.0) or 0)
+        bench = float(cbs_by_category.get(c, 0.0) or 0)
+        if spent <= 0 and bench <= 0:
+            continue
+        pct = round((spent / bench) * 100) if bench > 0 else None
+        if bench > 0 and spent > bench * 1.1:
+            status = 'over'
+        elif bench > 0 and spent < bench * 0.9:
+            status = 'under'
+        else:
+            status = 'near'
+        cbs_comparison.append({
+            'category': c, 'spent': round(spent, 2), 'benchmark': round(bench, 2),
+            'diff': round(spent - bench, 2), 'pct': pct, 'status': status,
+        })
 
     budget_goals_raw = []
     budget_breakdown = {}
@@ -147,6 +192,14 @@ def dashboard():
 
     insights = generate_insights(metrics['by_category'], cbs_benchmarks_raw, budget_goals_raw)
 
+    _MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+               'July', 'August', 'September', 'October', 'November', 'December']
+    try:
+        _y, _m = map(int, selected_month.split('-'))
+        selected_month_display = f'{_MONTHS[_m]} {_y}'
+    except Exception:
+        selected_month_display = selected_month
+
     return render_template(
         'dashboard.html',
         metrics=metrics,
@@ -160,7 +213,10 @@ def dashboard():
         transactions=transactions,
         insights=insights,
         selected_month=selected_month,
+        selected_month_display=selected_month_display,
         available_months=available_months,
+        step=5,
+        cbs_comparison=cbs_comparison,
     )
 
 
@@ -189,13 +245,13 @@ def export_pdf():
 
     cbs_benchmarks_raw, cbs_by_category = [], {}
     try:
-        res = supabase.table('cbs_benchmarks').select('category,monthly_avg').execute()
+        res = supabase.table('cbs_benchmarks').select('category,avg_monthly_ils').execute()
         if not getattr(res, 'error', None) and res.data:
             cbs_benchmarks_raw = res.data
             _s, _c = {}, {}
             for row in cbs_benchmarks_raw:
                 cat = row['category']
-                val = float(row.get('monthly_avg', 0) or 0)
+                val = float(row.get('avg_monthly_ils', 0) or 0)
                 if val > 0:
                     _s[cat] = _s.get(cat, 0.0) + val
                     _c[cat] = _c.get(cat, 0) + 1
@@ -465,7 +521,7 @@ def api_chat():
     # ── Call OpenAI ──
     api_key = os.environ.get('OPENAI_API_KEY', '').strip()
     if not api_key:
-        return jsonify({'reply': "Sorry, I can't answer right now — the AI service isn't configured."}), 200
+        return jsonify({'reply': "Sorry, I can't answer right now - the AI service isn't configured."}), 200
 
     try:
         from openai import OpenAI
@@ -522,7 +578,7 @@ def recategorize():
             errors += 1
 
     if errors:
-        flash(f'Re-categorized {updated} transaction(s) — {errors} error(s).', 'warning')
+        flash(f'Re-categorized {updated} transaction(s) - {errors} error(s).', 'warning')
     else:
         flash(f'Re-categorized {updated} transaction(s) successfully.', 'success')
     return redirect(url_for('transactions_page'))
@@ -544,14 +600,16 @@ def import_page():
         # Feature 3: month selected on the import form
         selected_month = request.form.get('month', date.today().strftime('%Y-%m')).strip()
 
+        filename = (file.filename or '').strip()
+        if not filename:
+            flash('No file selected.', 'error')
+            return redirect(url_for('import_page'))
+        if not filename.lower().endswith('.csv'):
+            flash('Only CSV files are supported.', 'error')
+            return redirect(url_for('import_page'))
+
         try:
-            # Feature 4: detect PDF vs CSV by file extension
-            filename = (file.filename or '').lower()
-            if filename.endswith('.pdf'):
-                from services.pdf_parser import parse_pdf
-                transactions = parse_pdf(file)
-            else:
-                transactions = parse_csv(file)
+            transactions = parse_csv(file)
             transactions = categorize_transactions(transactions)
 
             # Feature 1: build dedup set from all existing transactions for this student
@@ -603,18 +661,19 @@ def import_page():
             else:
                 if skipped:
                     flash(
-                        f'All {skipped} transaction{"s" if skipped != 1 else ""} already imported — '
+                        f'All {skipped} transaction{"s" if skipped != 1 else ""} already imported - '
                         'no duplicates added', 'info'
                     )
                 else:
                     flash('No transactions found in file', 'info')
-                return redirect(url_for('dashboard', month=selected_month))
+                return redirect(url_for('transactions_page'))
 
         except Exception as e:
             flash(f'Failed to parse file: {e}', 'error')
             return redirect(url_for('import_page'))
 
-        return redirect(url_for('dashboard', month=selected_month))
+        redirect_month = max((r['month'] for r in records), default=date.today().strftime('%Y-%m'))
+        return redirect(url_for('transactions_page', month=redirect_month))
 
     # GET: build month grid data
     try:
@@ -650,12 +709,14 @@ def import_page():
         for i in range(1, 13)
     ]
 
-    default_month = date.today().strftime('%Y-%m')
+    default_month = request.args.get('month', '').strip() or date.today().strftime('%Y-%m')
     current_year = date.today().year
 
     return render_template(
         'import.html',
         default_month=default_month,
+        selected_month=default_month,
+        step=2,
         months_info=months_info,
         selected_year=selected_year,
         current_year=current_year,
@@ -669,10 +730,31 @@ def transactions_page():
         flash('Please log in to view transactions', 'error')
         return redirect(url_for('login'))
 
-    f_category  = request.args.get('category', '').strip()
-    f_date_from = request.args.get('date_from', '').strip()
-    f_date_to   = request.args.get('date_to', '').strip()
-    f_search    = request.args.get('search', '').strip()
+    f_category = request.args.get('category', '').strip()
+    f_search   = request.args.get('search', '').strip()
+
+    # Resolve selected month: URL param → latest transaction month → today
+    month_param    = request.args.get('month', '').strip()
+    selected_month = month_param if month_param else _latest_user_month(user['id'])
+
+    # Compute ISO period bounds for the selected month
+    try:
+        _year, _mon = map(int, selected_month.split('-'))
+        _last = calendar.monthrange(_year, _mon)[1]
+    except Exception:
+        _year, _mon, _last = date.today().year, date.today().month, 31
+        selected_month = date.today().strftime('%Y-%m')
+    period_start = f'{selected_month}-01'
+    period_end   = f'{selected_month}-{_last:02d}'
+    period_label = (
+        f'{period_start[8:10]}/{period_start[5:7]}/{period_start[:4]}'
+        f' – '
+        f'{period_end[8:10]}/{period_end[5:7]}/{period_end[:4]}'
+    )
+
+    # User-supplied date filters override period defaults
+    f_date_from = request.args.get('date_from', '').strip() or period_start
+    f_date_to   = request.args.get('date_to',   '').strip() or period_end
 
     transactions = []
     try:
@@ -702,6 +784,11 @@ def transactions_page():
         f_date_to=f_date_to,
         f_search=f_search,
         now_month=now_month,
+        selected_month=selected_month,
+        period_start=period_start,
+        period_end=period_end,
+        period_label=period_label,
+        step=3,
     )
 
 
@@ -773,6 +860,10 @@ def budget():
         flash('Please log in to set budget goals', 'error')
         return redirect(url_for('login'))
 
+    selected_month = request.args.get('month', '').strip()
+    if not selected_month:
+        selected_month = _latest_user_month(user['id'])
+
     if request.method == 'POST':
         try:
             supabase.table('budget_goals').delete().eq('student_id', user['id']).execute()
@@ -795,7 +886,7 @@ def budget():
             flash('Budget goals saved', 'success')
         except Exception as e:
             flash(f'Error saving budget goals: {e}', 'error')
-        return redirect(url_for('budget'))
+        return redirect(url_for('budget', month=selected_month))
 
     goals = {}
     try:
@@ -807,7 +898,7 @@ def budget():
     except Exception:
         pass
 
-    return render_template('budget.html', goals=goals, categories=ALLOWED_CATEGORIES)
+    return render_template('budget.html', goals=goals, categories=ALLOWED_CATEGORIES, step=4, selected_month=selected_month)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -827,7 +918,7 @@ def register():
         try:
             auth_res = supabase.auth.sign_up({'email': email, 'password': password})
             if not auth_res.user:
-                flash('Registration failed — please try again', 'error')
+                flash('Registration failed - please try again', 'error')
                 return redirect(url_for('register'))
 
             supabase.table('students').insert({
@@ -836,7 +927,7 @@ def register():
                 'email': email,
             }).execute()
 
-            flash('Registration successful — please log in', 'success')
+            flash('Registration successful - please log in', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             flash(f'Registration error: {e}', 'error')
@@ -911,7 +1002,7 @@ def login():
             flash(f'Login error: {e}', 'error')
             return redirect(url_for('login'))
 
-    return render_template('login.html')
+    return render_template('login.html', step=1)
 
 
 @app.route('/logout')

@@ -478,7 +478,7 @@
   <!-- ── Page header ── -->
   <div class="import-header">
     <h2>Import Transactions</h2>
-    <p>Upload your bank or credit card statement (CSV or PDF) to analyze your spending.</p>
+    <p>Upload a bank transactions CSV file to analyze your spending.</p>
   </div>
 
   <!-- ── Year selector ── -->
@@ -503,7 +503,7 @@
              data-dashboard="/dashboard?month={{ m.ym }}"
              role="button"
              tabindex="0"
-             aria-label="{{ m.full_name }} {{ selected_year }}, ₪{{ '{:,.0f}'.format(m.total) }} spent — click to view dashboard">
+             aria-label="{{ m.full_name }} {{ selected_year }}, ₪{{ '{:,.0f}'.format(m.total) }} spent - click to view dashboard">
           <button type="button"
                   class="month-reupload-btn"
                   data-month="{{ m.ym }}"
@@ -521,7 +521,7 @@
              data-label="{{ m.full_name }} {{ selected_year }}"
              role="button"
              tabindex="0"
-             aria-label="{{ m.full_name }} {{ selected_year }}, no data — click to upload">
+             aria-label="{{ m.full_name }} {{ selected_year }}, no data - click to upload">
           <span class="month-name">{{ m.name }}</span>
           <span class="month-empty-hint">Upload</span>
         </div>
@@ -536,7 +536,7 @@
     <div class="upload-for-header">
       <div class="upload-for-label">
         <span class="material-symbols-outlined">calendar_month</span>
-        Uploading for: <strong id="uploadMonthLabel">—</strong>
+        Uploading for: <strong id="uploadMonthLabel">-</strong>
       </div>
       <button type="button" class="close-upload-btn" id="closeUploadBtn" title="Cancel">
         <span class="material-symbols-outlined">close</span>
@@ -556,12 +556,12 @@
           Drag and drop your file or
           <span class="browse-link">Browse Files</span>
         </p>
-        <p class="upload-sub">Supported formats: <strong>CSV</strong> or <strong>PDF</strong></p>
-        <!-- Covers entire zone — click anywhere opens file dialog -->
+        <p class="upload-sub">Supported format: <strong>CSV</strong></p>
+        <!-- Covers entire zone - click anywhere opens file dialog -->
         <input
           type="file"
           name="file"
-          accept=".csv,.pdf"
+          accept=".csv,text/csv"
           id="fileInput"
           class="file-input-hidden"
         >
@@ -573,7 +573,7 @@
           <span class="material-symbols-outlined">description</span>
         </div>
         <div class="file-info-text">
-          <div class="file-info-name" id="fileName">—</div>
+          <div class="file-info-name" id="fileName">-</div>
           <div class="file-info-meta" id="fileMeta">CSV File</div>
         </div>
         <button type="button" class="file-remove" id="removeFile" title="Remove file">
@@ -653,7 +653,7 @@
   }
 
   function fileType(name) {
-    return name.toLowerCase().endsWith('.pdf') ? 'PDF File' : 'CSV File';
+    return 'CSV File';
   }
 
   function setFile(file) {
@@ -663,7 +663,7 @@
     dropzone.classList.add('has-file');
     submitBtn.disabled = false;
     uploadHeadline.innerHTML =
-      'File selected — <span class="browse-link">Choose a different file</span>';
+      'File selected - <span class="browse-link">Choose a different file</span>';
   }
 
   function clearFile() {
@@ -693,7 +693,7 @@
     e.preventDefault();
     dropzone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file && /\.(csv|pdf)$/i.test(file.name)) {
+    if (file && /\.csv$/i.test(file.name)) {
       try {
         const dt = new DataTransfer();
         dt.items.add(file);

@@ -616,8 +616,50 @@ def import_page():
 
         return redirect(url_for('dashboard', month=selected_month))
 
+    # GET: build month grid data
+    try:
+        selected_year = int(request.args.get('year', ''))
+    except (ValueError, TypeError):
+        selected_year = date.today().year
+
+    monthly_totals = {}
+    try:
+        res = supabase.table('transactions') \
+            .select('month,date,amount') \
+            .eq('student_id', user['id']) \
+            .execute()
+        for row in (res.data or []):
+            m = row.get('month') or (row.get('date', '') or '')[:7]
+            try:
+                amt = float(row.get('amount', 0) or 0)
+            except Exception:
+                amt = 0.0
+            if m and amt < 0:
+                monthly_totals[m] = round(monthly_totals.get(m, 0.0) + (-amt), 2)
+    except Exception:
+        pass
+
+    months_info = [
+        {
+            'num': i,
+            'name': calendar.month_abbr[i],
+            'full_name': calendar.month_name[i],
+            'ym': f'{selected_year}-{i:02d}',
+            'total': monthly_totals.get(f'{selected_year}-{i:02d}'),
+        }
+        for i in range(1, 13)
+    ]
+
     default_month = date.today().strftime('%Y-%m')
-    return render_template('import.html', default_month=default_month)
+    current_year = date.today().year
+
+    return render_template(
+        'import.html',
+        default_month=default_month,
+        months_info=months_info,
+        selected_year=selected_year,
+        current_year=current_year,
+    )
 
 
 @app.route('/transactions')

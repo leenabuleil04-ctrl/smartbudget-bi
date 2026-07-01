@@ -192,6 +192,48 @@ def dashboard():
 
     insights = generate_insights(metrics['by_category'], cbs_benchmarks_raw, budget_goals_raw)
 
+    # ── Recommendation text ──
+    over_budget_cats = [cat for cat, data in budget_breakdown.items() if data['pct'] >= 100]
+
+    def _join_cats(cats):
+        if len(cats) == 1:
+            return cats[0]
+        if len(cats) == 2:
+            return f'{cats[0]} and {cats[1]}'
+        return ', '.join(cats[:-1]) + f', and {cats[-1]}'
+
+    bal = metrics['balance']
+    if not transactions:
+        recommendation = {'type': 'info', 'icon': 'upload_file',
+                          'text': 'Import transactions to see your personalised recommendation.'}
+    elif bal < 0:
+        if over_budget_cats:
+            recommendation = {
+                'type': 'danger', 'icon': 'warning',
+                'text': (f'You spent ₪{abs(bal):,.0f} more than you earned this month — mainly due to '
+                         f'overspending in {_join_cats(over_budget_cats)}. '
+                         f'Consider cutting back there next month.'),
+            }
+        else:
+            recommendation = {
+                'type': 'danger', 'icon': 'warning',
+                'text': (f'You spent ₪{abs(bal):,.0f} more than you earned this month. '
+                         f'Review your spending across all categories and consider where you can cut back next month.'),
+            }
+    elif over_budget_cats:
+        recommendation = {
+            'type': 'warning', 'icon': 'tips_and_updates',
+            'text': (f'You ended the month positive overall (₪{bal:,.0f} surplus), but '
+                     f'{_join_cats(over_budget_cats)} went over budget — worth tightening those up '
+                     f'even though the total came out fine.'),
+        }
+    else:
+        recommendation = {
+            'type': 'good', 'icon': 'check_circle',
+            'text': (f'You\'re on track this month — spending stayed within your budget goals across '
+                     f'all categories. You saved ₪{bal:,.0f} overall. Keep it up!'),
+        }
+
     _MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June',
                'July', 'August', 'September', 'October', 'November', 'December']
     try:
@@ -212,6 +254,7 @@ def dashboard():
         alerts=alerts,
         transactions=transactions,
         insights=insights,
+        recommendation=recommendation,
         selected_month=selected_month,
         selected_month_display=selected_month_display,
         available_months=available_months,

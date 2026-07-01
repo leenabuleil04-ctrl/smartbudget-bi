@@ -104,40 +104,6 @@
   }
 
   /* ── Forecast Banner ── */
-  .forecast-banner {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 20px;
-    border-radius: 14px;
-    margin-bottom: 24px;
-    font-size: 15px;
-    font-weight: 600;
-    border: 1px solid;
-  }
-  .forecast-banner .fc-icon { font-size: 22px; flex-shrink: 0; }
-  .forecast-banner .fc-text { flex: 1; }
-  .forecast-banner .fc-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 999px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    flex-shrink: 0;
-  }
-  .forecast-banner.green {
-    background: #f0fdf4; color: #166534; border-color: #bbf7d0;
-  }
-  .forecast-banner.green .fc-badge { background: #bbf7d0; color: #166534; }
-  .forecast-banner.red {
-    background: #fff1f2; color: #991b1b; border-color: #fecdd3;
-  }
-  .forecast-banner.red .fc-badge { background: #fecdd3; color: #991b1b; }
-  .forecast-banner.grey {
-    background: var(--surface-container-low); color: var(--on-surface-variant); border-color: var(--outline-variant);
-  }
-
   /* ── KPI Cards ── */
   .kpi-grid {
     display: grid;
@@ -387,35 +353,6 @@
   .dd-table tr:last-child td { border-bottom: none; }
   .dd-table tbody tr:hover td { background: var(--surface-container-low); }
 
-  /* ── Info grid ── */
-  .info-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: start;
-    margin-bottom: 0;
-  }
-  @media (max-width: 860px) { .info-grid-2 { grid-template-columns: 1fr; } }
-
-  .proj-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--on-surface-variant);
-    margin-bottom: 8px;
-  }
-  .proj-amount {
-    font-size: 34px;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    color: var(--on-surface);
-    margin-bottom: 8px;
-  }
-  .proj-amount.positive { color: #059669; }
-  .proj-amount.negative { color: var(--error); }
-
   /* Budget utilization */
   .budget-row { margin-bottom: 14px; }
   .budget-row-head {
@@ -493,26 +430,6 @@
 <div class="fi-1" style="font-size:14px;font-weight:600;color:var(--on-surface-variant);margin-bottom:16px;padding:10px 16px;background:var(--surface-container-low);border:1px solid var(--outline-variant);border-radius:12px;">
   Analysis month: <strong style="color:var(--on-surface);">{{ selected_month_display }}</strong>
 </div>
-
-<!-- ── Savings Forecast Banner ── -->
-{% if not transactions %}
-<div class="forecast-banner grey fi-1">
-  <span class="fc-icon">📁</span>
-  <span class="fc-text">Upload transactions to see your forecast</span>
-</div>
-{% elif metrics.projection >= 0 %}
-<div class="forecast-banner green fi-1">
-  <span class="fc-icon">📈</span>
-  <span class="fc-text">On track to save ₪{{ "%.0f"|format(metrics.projection) }} this month</span>
-  <span class="fc-badge">On Track</span>
-</div>
-{% else %}
-<div class="forecast-banner red fi-1">
-  <span class="fc-icon">📉</span>
-  <span class="fc-text">On track to overspend ₪{{ "%.0f"|format(metrics.projection | abs) }} this month</span>
-  <span class="fc-badge">At Risk</span>
-</div>
-{% endif %}
 
 <!-- ── KPI Cards ── -->
 <div class="kpi-grid">
@@ -723,63 +640,58 @@
   {% endif %}
 </div>
 
-<!-- ── Projection + Budget Utilization ── -->
-<div class="info-grid-2 fi-7">
-
-  <!-- Projection -->
-  <div class="sc" style="margin-bottom:0;">
-    <div class="sc-header">
-      <div>
-        <div class="sc-title">End-of-Month Projection</div>
-        <div class="sc-sub">Based on daily spending average</div>
-      </div>
-      <div class="sc-icon"><span class="material-symbols-outlined">trending_up</span></div>
+<!-- ── Budget Utilization ── -->
+<div class="sc fi-7">
+  <div class="sc-header">
+    <div>
+      <div class="sc-title">Budget Utilization</div>
+      <div class="sc-sub">Monthly limits vs actual spending</div>
     </div>
-    <div class="proj-label">Projected Balance</div>
-    <div class="proj-amount {% if metrics.projection >= 0 %}positive{% else %}negative{% endif %}">
-      ₪{{ "%.2f"|format(metrics.projection) }}
-    </div>
+    <div class="sc-icon"><span class="material-symbols-outlined">donut_large</span></div>
   </div>
-
-  <!-- Budget Utilization -->
-  <div class="sc" style="margin-bottom:0;">
-    <div class="sc-header">
-      <div>
-        <div class="sc-title">Budget Utilization</div>
-        <div class="sc-sub">Monthly limits vs actual spending</div>
+  {% if budget_breakdown %}
+    {% for cat, data in budget_breakdown.items() %}
+    <div class="budget-row">
+      <div class="budget-row-head">
+        <span class="budget-cat">{{ cat }}</span>
+        <span class="budget-vals">₪{{ "%.0f"|format(data.spent) }} / ₪{{ "%.0f"|format(data.goal) }}</span>
       </div>
-      <div class="sc-icon"><span class="material-symbols-outlined">donut_large</span></div>
+      <div class="budget-track">
+        <div class="budget-fill {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}"
+             style="width:{{ [data.pct, 100] | min }}%"></div>
+      </div>
+      <div class="budget-pct {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}">
+        {{ data.pct }}%{% if data.pct >= 100 %} - over budget{% endif %}
+      </div>
     </div>
-    {% if budget_breakdown %}
-      {% for cat, data in budget_breakdown.items() %}
-      <div class="budget-row">
-        <div class="budget-row-head">
-          <span class="budget-cat">{{ cat }}</span>
-          <span class="budget-vals">₪{{ "%.0f"|format(data.spent) }} / ₪{{ "%.0f"|format(data.goal) }}</span>
-        </div>
-        <div class="budget-track">
-          <div class="budget-fill {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}"
-               style="width:{{ [data.pct, 100] | min }}%"></div>
-        </div>
-        <div class="budget-pct {% if data.pct >= 100 %}over{% elif data.pct >= 80 %}warn{% else %}ok{% endif %}">
-          {{ data.pct }}%{% if data.pct >= 100 %} - over budget{% endif %}
-        </div>
-      </div>
-      {% endfor %}
-      <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
-        Edit goals <span class="material-symbols-outlined">arrow_forward</span>
-      </a>
-    {% else %}
-      <div class="no-data" style="padding:24px 0;">
-        <span class="material-symbols-outlined">savings</span>
-        No budget goals set yet.
-      </div>
-      <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
-        Set budget goals <span class="material-symbols-outlined">arrow_forward</span>
-      </a>
-    {% endif %}
-  </div>
+    {% endfor %}
+    <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
+      Edit goals <span class="material-symbols-outlined">arrow_forward</span>
+    </a>
+  {% else %}
+    <div class="no-data" style="padding:24px 0;">
+      <span class="material-symbols-outlined">savings</span>
+      No budget goals set yet.
+    </div>
+    <a href="{{ url_for('budget', month=selected_month) }}" class="budget-edit-link">
+      Set budget goals <span class="material-symbols-outlined">arrow_forward</span>
+    </a>
+  {% endif %}
+</div>
 
+<!-- ── Recommendation ── -->
+<div class="sc fi-8">
+  <div class="sc-header" style="margin-bottom:16px;">
+    <div>
+      <div class="sc-title">Recommendation</div>
+      <div class="sc-sub">Personalised advice based on this month's numbers</div>
+    </div>
+    <div class="sc-icon"><span class="material-symbols-outlined">tips_and_updates</span></div>
+  </div>
+  <div class="insight-card {{ recommendation.type }}" style="max-width:100%;">
+    <span class="i-icon material-symbols-outlined">{{ recommendation.icon }}</span>
+    <span>{{ recommendation.text }}</span>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

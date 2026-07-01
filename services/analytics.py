@@ -6,10 +6,12 @@ from decimal import Decimal
 CATEGORY_ORDER = ['Food', 'Rent', 'Transport', 'Entertainment', 'Education', 'Health', 'Shopping', 'Other']
 
 
-def compute_metrics(transactions):
+def compute_metrics(transactions, month=None):
     """Compute totals and category breakdowns from a list of transactions.
 
-    transactions: list of dicts with keys: date (YYYY-MM-DD), amount (float), category
+    transactions : list of dicts with keys: date (YYYY-MM-DD), amount (float), category
+    month        : 'YYYY-MM' of the viewed month — needed for correct projection when
+                   viewing a past month (past → projection equals actual spend, no extrapolation)
     Returns dict with totals and data for charts.
     """
     total_income = 0.0
@@ -44,15 +46,36 @@ def compute_metrics(transactions):
 
     balance = total_income - total_expenses
 
-    # projection to end of month: average daily net * remaining days + balance
+    # ── End-of-month projection ──
     today = date.today()
-    first = today.replace(day=1)
-    total_days = calendar.monthrange(today.year, today.month)[1]
-    days_passed = (today - first).days + 1
-    days_passed = max(1, days_passed)
-    avg_daily_net = net / days_passed if days_passed else 0
-    remaining_days = total_days - days_passed
-    projection = balance + avg_daily_net * remaining_days
+    cur_y, cur_m = today.year, today.month
+
+    # Resolve which month is being viewed
+    view_y, view_m = cur_y, cur_m
+    if month:
+        try:
+            view_y, view_m = map(int, month.split('-'))
+        except Exception:
+            pass
+
+    days_in_month = calendar.monthrange(view_y, view_m)[1]
+
+    if (view_y, view_m) < (cur_y, cur_m):
+        # Past month is already complete — projection IS the actual spend
+        days_elapsed = days_in_month
+        projection   = total_expenses
+    else:
+        # Current month — use today's real day, clamped to valid range
+        days_elapsed  = max(1, min(today.day, days_in_month))
+        avg_daily_net = net / days_elapsed
+        projection    = balance + avg_daily_net * (days_in_month - days_elapsed)
+
+    print(
+        f'[projection] month={month or f"{cur_y}-{cur_m:02d}"} '
+        f'days_elapsed={days_elapsed} days_in_month={days_in_month} '
+        f'total_spent={total_expenses:.2f} projection={projection:.2f}',
+        flush=True,
+    )
 
     # round outputs to 2 decimals
     def r(v):

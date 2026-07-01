@@ -122,7 +122,7 @@ def dashboard():
         if (t.get('month') or t.get('date', '')[:7]) == selected_month
     ]
 
-    metrics = compute_metrics(transactions)
+    metrics = compute_metrics(transactions, selected_month)
 
     cat_labels = CATEGORY_ORDER
     cat_values = [metrics['by_category'].get(c, 0) for c in cat_labels]
@@ -241,7 +241,7 @@ def export_pdf():
     except Exception:
         pass
 
-    metrics = compute_metrics(transactions)
+    metrics = compute_metrics(transactions, selected_month)
 
     cbs_benchmarks_raw, cbs_by_category = [], {}
     try:
@@ -462,7 +462,7 @@ def api_chat():
         t for t in all_tx
         if (t.get('month') or t.get('date', '')[:7]) == month
     ]
-    metrics = compute_metrics(month_tx)
+    metrics = compute_metrics(month_tx, month)
 
     # ── Fetch budget goals ──
     goals_map = {}

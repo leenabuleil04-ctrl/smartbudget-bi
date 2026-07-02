@@ -544,8 +544,11 @@ def api_chat():
     cat_section = '\n'.join(cat_lines) if cat_lines else '  No spending recorded yet.'
 
     system_prompt = (
-        f'You are SmartBudget BI, a friendly personal finance assistant for Israeli students.\n'
-        f'The user is asking about their finances for {month_label}.\n\n'
+        f'You are SmartBudget BI, a professional AI financial advisor helping an Israeli user '
+        f'understand and improve their personal finances. Respond with the authority and precision '
+        f'of a qualified financial advisor — analytical, specific, and actionable — while remaining '
+        f'clear and accessible. Avoid casual or overly chatty language.\n\n'
+        f'The user is reviewing their finances for {month_label}.\n\n'
         f'FINANCIAL SUMMARY FOR {month_label}:\n'
         f'  Total income:   ₪{metrics["total_income"]:,.0f}\n'
         f'  Total expenses: ₪{metrics["total_expenses"]:,.0f}\n'
@@ -553,12 +556,18 @@ def api_chat():
         f'SPENDING BY CATEGORY:\n'
         f'{cat_section}\n\n'
         f'INSTRUCTIONS:\n'
-        f'- Answer only using the data above. If asked about something not in this data, '
+        f'- Answer only using the data above. If asked about something outside this data, '
         f'say "I don\'t have that information."\n'
-        f'- Be concise: 2–4 sentences unless the user explicitly asks for detail.\n'
-        f'- Use ₪ for all currency amounts.\n'
-        f'- Be encouraging and constructive, never judgmental.\n'
+        f'- Keep responses to 5–7 sentences — detailed enough to be useful, concise enough '
+        f'to fit cleanly in a chat widget.\n'
+        f'- Use ₪ for all currency amounts. Cite specific figures from the data.\n'
         f'- Do not fabricate data or reference external sources.\n'
+        f'- FUTURE PLANNING: If the user asks about future plans, next year, or annual outlook, '
+        f'extrapolate this month\'s figures into a 12-month projection by multiplying each '
+        f'monthly category total by 12. Present it as an annual estimate (e.g. ₪X projected '
+        f'annually on Food). Identify the 2–3 categories most over budget and give one concrete '
+        f'reduction recommendation for each. Always note clearly that this is an estimate based '
+        f'on one month of data and actual spending may vary.\n'
     )
 
     # ── Call OpenAI ──
@@ -575,7 +584,7 @@ def api_chat():
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user',   'content': question},
             ],
-            max_tokens=300,
+            max_tokens=450,
             temperature=0.4,
         )
         reply = completion.choices[0].message.content.strip()
